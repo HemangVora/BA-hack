@@ -4,7 +4,7 @@
   "description": "SQD blockchain indexer for BAHack smart contract",
   "type": "module",
   "scripts": {
-    "start": "tsx pipe-bahack.ts",
+    "start": "NODE_OPTIONS='--experimental-global-webcrypto' tsx pipe-bahack.ts",
     "dev": "tsx pipe-bahack.ts",
     "multi": "tsx pipe-multi.ts",
     "mcp": "tsx mcp-server.ts"
