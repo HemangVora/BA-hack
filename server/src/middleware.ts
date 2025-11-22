@@ -14,12 +14,14 @@ async function dynamicPricingMiddleware(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  console.log(`[MIDDLEWARE] Incoming request: ${req.method} ${req.path}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`);
-  
+  console.log(
+    `[MIDDLEWARE] Incoming request: ${req.method} ${req.path}${req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""}`,
+  );
+
   // Only apply to /download endpoint (both /download and /download/:pieceCid)
   const isDownloadPath = req.path === "/download" || req.path.startsWith("/download/");
   console.log(`[MIDDLEWARE] Is download path: ${isDownloadPath}, method: ${req.method}`);
-  
+
   if (!isDownloadPath || req.method !== "GET") {
     console.log(`[MIDDLEWARE] Skipping - not a download request`);
     return next();
@@ -29,7 +31,7 @@ async function dynamicPricingMiddleware(
   // For path params like /download/:pieceCid, we need to extract from the path string
   // since req.params isn't populated until after route matching
   let pieceCid: string | undefined;
-  
+
   if (req.path.startsWith("/download/")) {
     // Extract from path: /download/bafkzcibcaabai3vffxbbuatysolo6sfd23ffr3e5r5t4wbccfootkd2pi6uyupi
     const pathParts = req.path.split("/");
@@ -40,7 +42,7 @@ async function dynamicPricingMiddleware(
     // Extract from query parameter: /download?pieceCid=...
     pieceCid = req.query.pieceCid as string;
   }
-  
+
   if (!pieceCid) {
     // Let the route handler deal with missing pieceCid
     return next();
@@ -48,13 +50,15 @@ async function dynamicPricingMiddleware(
 
   console.log(`[DYNAMIC_PRICING] ========================================`);
   console.log(`[DYNAMIC_PRICING] Starting payment middleware setup for PieceCID: ${pieceCid}`);
-  console.log(`[DYNAMIC_PRICING] Request URL: ${req.protocol}://${req.headers.host}${req.path}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`);
+  console.log(
+    `[DYNAMIC_PRICING] Request URL: ${req.protocol}://${req.headers.host}${req.path}${req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""}`,
+  );
 
   try {
     // First, check the contract for registered data - REQUIRED
     console.log(`[DYNAMIC_PRICING] Checking contract registry for PieceCID...`);
     const contractData = await getDataFromContract(pieceCid);
-    
+
     if (!contractData) {
       console.log(`[DYNAMIC_PRICING] ✗ PieceCID not found in contract registry`);
       res.status(404).json({
@@ -64,76 +68,131 @@ async function dynamicPricingMiddleware(
       });
       return;
     }
-    
+
     // Use price and payAddress from contract
     // Convert priceUSDC (6 decimals) to USD format for x402
     const priceInUSD = Number(contractData.priceUSDC) / 1_000_000;
     const dynamicPrice = `$${priceInUSD.toFixed(6)}`;
     const contractPayAddress = contractData.payAddress;
-    
+
     console.log(`[DYNAMIC_PRICING] ✓ Found in contract registry:`);
     console.log(`[DYNAMIC_PRICING]   - Name: ${contractData.name}`);
     console.log(`[DYNAMIC_PRICING]   - Description: ${contractData.description}`);
     console.log(`[DYNAMIC_PRICING]   - Filetype: ${contractData.filetype}`);
-    console.log(`[DYNAMIC_PRICING]   - Price from contract: ${dynamicPrice} (${contractData.priceUSDC} microUSDC)`);
+    console.log(
+      `[DYNAMIC_PRICING]   - Price from contract: ${dynamicPrice} (${contractData.priceUSDC} microUSDC)`,
+    );
     console.log(`[DYNAMIC_PRICING]   - Pay Address from contract: ${contractPayAddress}`);
-    
+
     // Store in request for potential use
     req.dynamicPrice = dynamicPrice;
     req.contractData = contractData;
 
     // Use payAddress from contract
     const finalPayTo = contractPayAddress;
-    
+
     // Create x402 middleware dynamically with price from contract
     console.log(`[DYNAMIC_PRICING] Creating x402 payment middleware...`);
     console.log(`[DYNAMIC_PRICING]   - Price: ${dynamicPrice} (from contract)`);
     console.log(`[DYNAMIC_PRICING]   - Network: base-sepolia`);
     console.log(`[DYNAMIC_PRICING]   - Pay to: ${finalPayTo} (from contract)`);
     console.log(`[DYNAMIC_PRICING]   - Facilitator: ${facilitatorUrl}`);
-    
+
+    // Debug: Validate payTo address format
+    console.log(`[DYNAMIC_PRICING]   - PayTo address length: ${finalPayTo.length}`);
+    console.log(
+      `[DYNAMIC_PRICING]   - PayTo address starts with 0x: ${finalPayTo.startsWith("0x")}`,
+    );
+
+    // Create the resource configuration
+    const resourceConfig = {
+      "GET /download": {
+        price: dynamicPrice,
+        network: "base-sepolia" as const,
+      },
+      "GET /download/*": {
+        price: dynamicPrice,
+        network: "base-sepolia" as const,
+      },
+    };
+
+    console.log(`[DYNAMIC_PRICING]   - Resource config:`, JSON.stringify(resourceConfig, null, 2));
+
     const dynamicPaymentMiddleware = paymentMiddleware(
       finalPayTo as `0x${string}` | SolanaAddress,
-      {
-        "GET /download": {
-          price: dynamicPrice,
-          network: "base-sepolia",
-        },
-        "GET /download/*": {
-          price: dynamicPrice,
-          network: "base-sepolia",
-        },
-      },
+      resourceConfig,
       {
         url: facilitatorUrl,
       },
     );
 
     // Execute the dynamically created middleware
-    console.log(`[DYNAMIC_PRICING] Executing x402 payment middleware (checking for X-PAYMENT header)...`);
-    const hasPaymentHeader = req.headers['x-payment'] ? 'present' : 'missing';
+    console.log(
+      `[DYNAMIC_PRICING] Executing x402 payment middleware (checking for X-PAYMENT header)...`,
+    );
+    const hasPaymentHeader = req.headers["x-payment"] ? "present" : "missing";
     console.log(`[DYNAMIC_PRICING]   - X-PAYMENT header: ${hasPaymentHeader}`);
-    
+
+    // Debug: Log the X-PAYMENT header value if present
+    if (req.headers["x-payment"]) {
+      console.log(
+        `[DYNAMIC_PRICING]   - X-PAYMENT value (first 100 chars): ${String(req.headers["x-payment"]).substring(0, 100)}...`,
+      );
+      try {
+        // Try to decode and parse the payment header
+        const paymentHeaderValue = String(req.headers["x-payment"]);
+        const decoded = Buffer.from(paymentHeaderValue, "base64").toString("utf-8");
+        const paymentData = JSON.parse(decoded);
+        console.log(`[DYNAMIC_PRICING]   - Decoded payment data:`, {
+          network: paymentData.network,
+          paymentType: paymentData.paymentType,
+          transaction: paymentData.transaction
+            ? `${String(paymentData.transaction).substring(0, 20)}...`
+            : "none",
+          hasSignature: !!paymentData.signature,
+        });
+      } catch (e) {
+        console.log(
+          `[DYNAMIC_PRICING]   - Could not decode X-PAYMENT header:`,
+          e instanceof Error ? e.message : String(e),
+        );
+      }
+    }
+
+    // Debug: Log request path and method for middleware matching
+    console.log(`[DYNAMIC_PRICING]   - Request path for middleware: ${req.path}`);
+    console.log(`[DYNAMIC_PRICING]   - Request method: ${req.method}`);
+    console.log(
+      `[DYNAMIC_PRICING]   - Expected middleware patterns: "GET /download" or "GET /download/*"`,
+    );
+
     // Intercept response to capture X-PAYMENT-RESPONSE header after settlement
     const originalEnd = res.end.bind(res);
-    res.end = function(chunk?: any, encoding?: BufferEncoding | (() => void), cb?: () => void): Response {
+    res.end = function (
+      chunk?: any,
+      encoding?: BufferEncoding | (() => void),
+      cb?: () => void,
+    ): Response {
       // Extract settlement info from X-PAYMENT-RESPONSE header if present
-      const paymentResponseHeader = res.getHeader('X-PAYMENT-RESPONSE') || res.getHeader('x-payment-response');
-      if (paymentResponseHeader && typeof paymentResponseHeader === 'string') {
+      const paymentResponseHeader =
+        res.getHeader("X-PAYMENT-RESPONSE") || res.getHeader("x-payment-response");
+      if (paymentResponseHeader && typeof paymentResponseHeader === "string") {
         try {
           // Decode base64 header and parse JSON
-          const decoded = Buffer.from(paymentResponseHeader, 'base64').toString('utf-8');
+          const decoded = Buffer.from(paymentResponseHeader, "base64").toString("utf-8");
           const settlementInfo = JSON.parse(decoded) as X402SettlementInfo;
           if (settlementInfo.success && settlementInfo.transaction) {
             req.x402SettlementInfo = settlementInfo;
-            console.log(`[DYNAMIC_PRICING] ✓ Captured x402 settlement: tx=${settlementInfo.transaction} on ${settlementInfo.network}`);
+            console.log(
+              `[DYNAMIC_PRICING] ✓ Captured x402 settlement: tx=${settlementInfo.transaction} on ${settlementInfo.network}`,
+            );
           }
         } catch (error) {
           console.warn(`[DYNAMIC_PRICING] Failed to parse X-PAYMENT-RESPONSE header:`, error);
         }
       }
       // Call original end with proper arguments handling
-      if (typeof encoding === 'function') {
+      if (typeof encoding === "function") {
         return originalEnd(chunk, encoding);
       } else if (encoding !== undefined) {
         return originalEnd(chunk, encoding, cb);
@@ -141,7 +200,7 @@ async function dynamicPricingMiddleware(
         return originalEnd(chunk);
       }
     } as typeof res.end;
-    
+
     // Create a controlled next function that tracks when payment is verified
     // The x402 middleware will ONLY call next() after payment verification succeeds
     // If payment fails, the middleware sends a 402 and returns without calling next()
@@ -150,10 +209,12 @@ async function dynamicPricingMiddleware(
       // If this function is called, it means the x402 middleware verified payment
       // and is allowing the request to proceed to the route handler
       paymentVerified = true;
-      console.log(`[DYNAMIC_PRICING] ✓ Payment verified by x402 middleware - calling route handler`);
+      console.log(
+        `[DYNAMIC_PRICING] ✓ Payment verified by x402 middleware - calling route handler`,
+      );
       next();
     };
-    
+
     try {
       // Execute the x402 payment middleware
       // This will:
@@ -161,7 +222,7 @@ async function dynamicPricingMiddleware(
       // 2. If missing/invalid: send 402 and return (doesn't call next())
       // 3. If valid: verify payment, then call next() to proceed to route handler
       await dynamicPaymentMiddleware(req, res, controlledNext);
-      
+
       // After middleware completes, check what happened
       if (res.headersSent) {
         // A response was sent - check if it was a 402 (payment required)
@@ -175,22 +236,37 @@ async function dynamicPricingMiddleware(
         if (res.statusCode === 200 && paymentVerified) {
           console.log(`[DYNAMIC_PRICING] ✓ Payment verified (200) - route handler executed`);
         } else {
-          console.log(`[DYNAMIC_PRICING] Unexpected state: status=${res.statusCode}, verified=${paymentVerified}`);
+          console.log(
+            `[DYNAMIC_PRICING] Unexpected state: status=${res.statusCode}, verified=${paymentVerified}`,
+          );
         }
         // If headers were sent but payment wasn't verified, stop here
         if (!paymentVerified) {
-          console.log(`[DYNAMIC_PRICING] ⚠ Response sent but payment not verified - blocking request`);
+          console.log(
+            `[DYNAMIC_PRICING] ⚠ Response sent but payment not verified - blocking request`,
+          );
           console.log(`[DYNAMIC_PRICING] ========================================`);
           return;
         }
       } else if (!paymentVerified) {
         // No response sent and payment not verified - this shouldn't happen
         // The x402 middleware should have either verified payment (calling next) or sent 402
-        console.log(`[DYNAMIC_PRICING] ⚠ WARNING: Payment middleware completed but payment not verified and no response sent`);
-        console.log(`[DYNAMIC_PRICING] This should not happen - blocking request as safety measure`);
+        console.log(
+          `[DYNAMIC_PRICING] ⚠ WARNING: Payment middleware completed but payment not verified and no response sent`,
+        );
+        console.log(
+          `[DYNAMIC_PRICING] This should not happen - blocking request as safety measure`,
+        );
         console.log(`[DYNAMIC_PRICING] ========================================`);
         if (!res.headersSent) {
-          res.status(500).json(createErrorResponse("Payment verification error", "Payment middleware did not verify payment or send response"));
+          res
+            .status(500)
+            .json(
+              createErrorResponse(
+                "Payment verification error",
+                "Payment middleware did not verify payment or send response",
+              ),
+            );
         }
         return;
       } else {
@@ -199,8 +275,32 @@ async function dynamicPricingMiddleware(
       }
     } catch (middlewareError: unknown) {
       // If the payment middleware itself throws an error
-      const errorMessage = middlewareError instanceof Error ? middlewareError.message : "Unknown error";
-      console.error(`[DYNAMIC_PRICING] Error in payment middleware execution:`, errorMessage);
+      const errorMessage =
+        middlewareError instanceof Error ? middlewareError.message : "Unknown error";
+      console.error(`[DYNAMIC_PRICING] ❌ Error in payment middleware execution:`, errorMessage);
+
+      // Debug: Log full error details
+      if (middlewareError instanceof Error) {
+        console.error(`[DYNAMIC_PRICING]   - Error name: ${middlewareError.name}`);
+        console.error(`[DYNAMIC_PRICING]   - Error message: ${middlewareError.message}`);
+        console.error(`[DYNAMIC_PRICING]   - Error stack:`, middlewareError.stack);
+        console.error(
+          `[DYNAMIC_PRICING]   - Full error object:`,
+          JSON.stringify(middlewareError, Object.getOwnPropertyNames(middlewareError), 2),
+        );
+      } else {
+        console.error(`[DYNAMIC_PRICING]   - Raw error:`, middlewareError);
+      }
+
+      // Debug: Log the middleware configuration that caused the error
+      console.error(`[DYNAMIC_PRICING]   - Middleware was configured with:`);
+      console.error(`[DYNAMIC_PRICING]     * network: "base-sepolia"`);
+      console.error(`[DYNAMIC_PRICING]     * price: ${dynamicPrice}`);
+      console.error(`[DYNAMIC_PRICING]     * payTo: ${finalPayTo}`);
+      console.error(`[DYNAMIC_PRICING]     * facilitatorUrl: ${facilitatorUrl}`);
+      console.error(`[DYNAMIC_PRICING]     * request path: ${req.path}`);
+      console.error(`[DYNAMIC_PRICING]     * request method: ${req.method}`);
+
       if (!res.headersSent) {
         res.status(500).json(createErrorResponse("Payment middleware error", errorMessage));
       }
@@ -212,23 +312,25 @@ async function dynamicPricingMiddleware(
   } catch (error: unknown) {
     console.error(`[DYNAMIC_PRICING] Error in dynamic pricing middleware:`, error);
     const errorMessage = error instanceof Error ? error.message : "Could not fetch file metadata";
-    
+
     // Check if it's a configuration error (missing SEPOLIA_RPC_URL)
     if (errorMessage.includes("SEPOLIA_RPC_URL")) {
       console.error(`[DYNAMIC_PRICING] ✗ Configuration error: ${errorMessage}`);
       if (!res.headersSent) {
-        res.status(500).json(createErrorResponse(
-          "Server configuration error",
-          "SEPOLIA_RPC_URL is required for contract lookups. Please configure it in the server environment variables.",
-          { 
-            error: errorMessage,
-            hint: "Set SEPOLIA_RPC_URL in your .env file (e.g., https://rpc.sepolia.org or your Infura/Alchemy URL)"
-          }
-        ));
+        res.status(500).json(
+          createErrorResponse(
+            "Server configuration error",
+            "SEPOLIA_RPC_URL is required for contract lookups. Please configure it in the server environment variables.",
+            {
+              error: errorMessage,
+              hint: "Set SEPOLIA_RPC_URL in your .env file (e.g., https://rpc.sepolia.org or your Infura/Alchemy URL)",
+            },
+          ),
+        );
       }
       return;
     }
-    
+
     // If we can't get contract data, return an error
     if (!res.headersSent) {
       res.status(500).json(createErrorResponse("Failed to fetch contract data", errorMessage));
@@ -239,7 +341,7 @@ async function dynamicPricingMiddleware(
 export function setupPaymentMiddleware(app: express.Application) {
   // Apply dynamic pricing middleware for /download
   app.use(dynamicPricingMiddleware);
-  
+
   // For other endpoints, you can add static pricing here if needed
   // app.use(
   //   paymentMiddleware(
@@ -256,4 +358,3 @@ export function setupPaymentMiddleware(app: express.Application) {
   //   ),
   // );
 }
-
