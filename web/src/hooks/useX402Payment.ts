@@ -145,7 +145,7 @@ export function useX402Payment() {
             type: "eip1559",
           },
           evmAccount: evmAddress as `0x${string}`,
-          network: network as any, // Use dynamic network from payment option
+          network: "base-sepolia",
         });
 
         txHash = result.transactionHash;
@@ -159,7 +159,7 @@ export function useX402Payment() {
         scheme: "exact",
         payload: {
           transactionHash: txHash,
-          network: network, // Use network name (e.g., "base-sepolia") not chainId
+          network: "base-sepolia",
         },
       };
 
