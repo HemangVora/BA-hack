@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useEvmAddress } from "@coinbase/cdp-hooks";
-import { createWalletClient, custom, http, type WalletClient } from "viem";
-import { baseSepolia } from "viem/chains";
+import { useEvmAddress, useSendEvmTransaction } from "@coinbase/cdp-hooks";
+import { encodeFunctionData } from "viem";
 
 // Extend Window interface for ethereum provider
 declare global {
@@ -39,6 +38,7 @@ export interface DownloadResult {
  */
 export function useX402Payment() {
   const { evmAddress } = useEvmAddress();
+  const { sendEvmTransaction } = useSendEvmTransaction();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,19 +113,7 @@ export function useX402Payment() {
           from: evmAddress,
         });
 
-        // Step 3: Create wallet client using window.ethereum
-        const ethereum = (window as any).ethereum;
-        if (!ethereum) {
-          throw new Error("Ethereum provider not found");
-        }
-
-        const walletClient = createWalletClient({
-          account: evmAddress as `0x${string}`,
-          chain: baseSepolia,
-          transport: custom(ethereum),
-        });
-
-        // Step 4: Send the payment transaction
+        // Step 3: Send the payment transaction using CDP SDK
         let txHash: string;
 
         if (asset) {
@@ -146,23 +134,43 @@ export function useX402Payment() {
             },
           ] as const;
 
-          txHash = await walletClient.writeContract({
-            account: evmAddress as `0x${string}`,
-            address: asset as `0x${string}`,
+          // Encode the transfer function call
+          const data = encodeFunctionData({
             abi: erc20Abi,
             functionName: "transfer",
             args: [to as `0x${string}`, BigInt(value)],
-            chain: baseSepolia,
           });
+
+          // Send the transaction using CDP SDK
+          const result = await sendEvmTransaction({
+            transaction: {
+              to: asset,
+              data: data,
+              value: BigInt(0), // No ETH value for ERC20 transfer
+              chainId: chainId,
+              type: "eip1559",
+            },
+            evmAccount: evmAddress as `0x${string}`,
+            network: "base-sepolia",
+          });
+
+          txHash = result.transactionHash;
         } else {
           // Native token payment (ETH)
           console.log("[X402] Sending native token payment...");
-          txHash = await walletClient.sendTransaction({
-            account: evmAddress as `0x${string}`,
-            to: to as `0x${string}`,
-            value: BigInt(value),
-            chain: baseSepolia,
+
+          const result = await sendEvmTransaction({
+            transaction: {
+              to: to,
+              value: BigInt(value),
+              chainId: chainId,
+              type: "eip1559",
+            },
+            evmAccount: evmAddress as `0x${string}`,
+            network: "base-sepolia",
           });
+
+          txHash = result.transactionHash;
         }
 
         console.log("[X402] Payment transaction sent:", txHash);
