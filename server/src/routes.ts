@@ -1,6 +1,6 @@
 import express from "express";
 import { downloadFromFilecoin, uploadToFilecoin, downloadFromUrl } from "./services/filecoin.js";
-import { registerUploadOnContract, CONTRACT_ADDRESS } from "./services/contract.js";
+import { registerUploadOnContract, registerDownloadOnContract, CONTRACT_ADDRESS } from "./services/contract.js";
 import { getAllDatasetEvents } from "./services/clickhouse.js";
 import { compareTwoStrings } from "string-similarity";
 import { RequestWithContractData, DownloadResult, UploadRequestBody, ErrorResponse } from "./types.js";
@@ -83,6 +83,18 @@ router.get("/download", async (req: RequestWithContractData, res) => {
     // Add contract metadata (name and filetype) if available from middleware
     addContractMetadataToResult(result, req.contractData);
 
+    // Register download event on contract (non-blocking, don't fail if it errors)
+    try {
+      const downloadTx = await registerDownloadOnContract(pieceCid);
+      if (downloadTx) {
+        console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+      }
+    } catch (error: unknown) {
+      // Don't fail the download if registration fails
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
+    }
+
     console.log(`[ROUTE] ✓ Successfully downloaded ${result.size} bytes (format: ${result.format}, type: ${result.type})`);
     return res.json(result);
   } catch (error: unknown) {
@@ -128,6 +140,18 @@ router.get("/download/:pieceCid", async (req: RequestWithContractData, res) => {
 
     // Add contract metadata (name and filetype) if available from middleware
     addContractMetadataToResult(result, req.contractData);
+
+    // Register download event on contract (non-blocking, don't fail if it errors)
+    try {
+      const downloadTx = await registerDownloadOnContract(pieceCid);
+      if (downloadTx) {
+        console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+      }
+    } catch (error: unknown) {
+      // Don't fail the download if registration fails
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
+    }
 
     console.log(`[ROUTE] ✓ Successfully downloaded ${result.size} bytes (format: ${result.format}, type: ${result.type})`);
     return res.json(result);

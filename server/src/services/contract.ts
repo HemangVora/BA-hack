@@ -141,3 +141,48 @@ export async function getDataFromContract(
   }
 }
 
+/**
+ * Registers a download event on the DataBoxRegistry smart contract
+ * @param pieceCid The PieceCID that was downloaded
+ * @returns Transaction hash and block number (optional - may not wait for confirmation)
+ */
+export async function registerDownloadOnContract(
+  pieceCid: string,
+): Promise<{ txHash: string; blockNumber?: number } | null> {
+  if (!privateKey) {
+    // If no private key, we can't register downloads - this is optional
+    console.log(`[CONTRACT] PRIVATE_KEY not configured, skipping download registration`);
+    return null;
+  }
+
+  // Connect to Sepolia network
+  if (!sepoliaRpcUrl) {
+    console.log(`[CONTRACT] SEPOLIA_RPC_URL not configured, skipping download registration`);
+    return null;
+  }
+  
+  const provider = new ethers.JsonRpcProvider(sepoliaRpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+  console.log(`[CONTRACT] Registering download for PieceCID: ${pieceCid}`);
+
+  try {
+    // Call the register_download function
+    const tx = await contract.register_download(pieceCid);
+    console.log(`[CONTRACT] Download registration transaction sent: ${tx.hash}`);
+    
+    // Don't wait for confirmation to avoid blocking the download response
+    // The transaction will be mined asynchronously
+    return {
+      txHash: tx.hash,
+      // blockNumber will be undefined until we wait for confirmation
+    };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Don't fail the download if registration fails - just log it
+    console.error(`[CONTRACT] Error registering download (non-fatal):`, errorMessage);
+    return null;
+  }
+}
+

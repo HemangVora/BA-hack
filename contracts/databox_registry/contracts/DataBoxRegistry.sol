@@ -31,6 +31,17 @@ contract DataBoxRegistry {
         uint256 timestamp
     );
 
+    // Event for download data
+    event DataDownloaded(
+        string pieceCid,
+        string name,
+        string description,
+        string filetype,
+        uint256 priceUSDC,
+        string payAddress,
+        uint256 timestamp
+    );
+
     /**
      * @dev Register data and store in mapping
      * @param _pieceCid unique PieceCID identifier from Filecoin
@@ -121,5 +132,29 @@ contract DataBoxRegistry {
      */
     function isRegistered(string memory _pieceCid) public view returns (bool) {
         return bytes(dataRegistry[_pieceCid].description).length > 0;
+    }
+
+    /**
+     * @dev Register a download event
+     * @param _pieceCid the PieceCID that was downloaded
+     */
+    function register_download(string memory _pieceCid) public {
+        // Verify that the data is registered
+        DataInfo memory data = dataRegistry[_pieceCid];
+        require(
+            bytes(data.description).length > 0,
+            "Data with this PieceCID not found"
+        );
+
+        // Emit event for off-chain indexing with metadata
+        emit DataDownloaded(
+            _pieceCid,
+            data.name,
+            data.description,
+            data.filetype,
+            data.priceUSDC,
+            data.payAddress,
+            block.timestamp
+        );
     }
 }
