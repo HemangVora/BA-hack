@@ -36,6 +36,32 @@ router.get("/download", async (req, res) => {
   }
 });
 
+// Test endpoint without payment middleware
+router.get("/download_test", async (req, res) => {
+  try {
+    const pieceCid = req.query.pieceCid as string;
+
+    if (!pieceCid) {
+      return res.status(400).json({
+        error: "Missing pieceCid parameter",
+        usage: "GET /download_test?pieceCid=<PieceCID>",
+        example: "GET /download_test?pieceCid=baga6ea4seaq...",
+      });
+    }
+
+    console.log(`[DOWNLOAD_TEST] Starting download for PieceCID: ${pieceCid}`);
+    const result = await downloadFromFilecoin(pieceCid);
+    console.log(`[DOWNLOAD_TEST] Successfully downloaded ${result.size} bytes (format: ${result.format})`);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Download test error:", error);
+    return res.status(500).json({
+      error: "Download failed",
+      message: error.message || "Unknown error occurred",
+    });
+  }
+});
+
 router.post("/upload", async (req, res) => {
   try {
     const { message } = req.body;
