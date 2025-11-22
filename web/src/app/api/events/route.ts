@@ -13,8 +13,10 @@ const clickhouseClient = createClient({
 export interface DatasetEvent {
   block_number: number;
   timestamp: number;
-  text_id: string;
+  piece_cid: string;
+  name: string;
   description: string;
+  filetype: string;
   price_usdc: string;
   pay_address: string;
   tx_hash: string;
@@ -28,8 +30,10 @@ export async function GET() {
         SELECT 
           block_number,
           timestamp,
-          text_id,
+          piece_cid,
+          name,
           description,
+          filetype,
           price_usdc,
           pay_address,
           tx_hash

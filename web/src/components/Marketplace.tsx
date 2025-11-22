@@ -7,8 +7,10 @@ import { useEffect, useState } from "react";
 interface DatasetEvent {
   block_number: number;
   timestamp: number;
-  text_id: string;
+  piece_cid: string;
+  name: string;
   description: string;
+  filetype: string;
   price_usdc: string;
   pay_address: string;
   tx_hash: string;
@@ -31,11 +33,11 @@ export function Marketplace() {
           setEventCount(data.count);
           // Transform events to dataset card format
           const transformedDatasets = data.events.map(
-            (event: DatasetEvent, index: number) => ({
-              title: `Dataset #${data.count - index}`, // Demo name - will be replaced with contract name field
+            (event: DatasetEvent) => ({
+              title: event.name || "Untitled Dataset",
               description: event.description,
               price: (parseInt(event.price_usdc) / 1_000_000).toFixed(2), // Convert USDC (6 decimals) to readable format
-              format: "Blockchain",
+              format: event.filetype || "Unknown",
               size: "On-chain",
               author: `${event.pay_address.slice(
                 0,
