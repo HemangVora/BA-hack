@@ -36,7 +36,7 @@ export function Marketplace() {
             (event: DatasetEvent) => ({
               title: event.name || "Untitled Dataset",
               description: event.description,
-              price: (parseInt(event.price_usdc) / 1_000_000).toFixed(2), // Convert USDC (6 decimals) to readable format
+              price: parseInt(event.price_usdc) / 1_000_000, // Convert USDC (6 decimals) to readable format
               format: event.filetype || "Unknown",
               size: "On-chain",
               author: `${event.pay_address.slice(

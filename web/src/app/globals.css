@@ -40,3 +40,22 @@ body {
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+
+/* CDP Modal Z-Index Override - Ensure auth modal appears above all content */
+[data-radix-popper-content-wrapper],
+[data-radix-portal],
+[role="dialog"],
+[role="alertdialog"] {
+  z-index: 9999 !important;
+}
+
+/* CDP Modal Backdrop */
+[data-radix-presence] {
+  z-index: 9998 !important;
+}
+
+/* Ensure CDP auth components are above hero section */
+button[data-cdp-auth],
+div[data-cdp-modal] {
+  z-index: 9999 !important;
+}

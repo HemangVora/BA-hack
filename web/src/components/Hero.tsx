@@ -15,7 +15,7 @@ export function Hero() {
       {/* Subtle Grid Overlay */}
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
 
-      <div className="p-4 max-w-7xl mx-auto relative z-10 w-full text-center">
+      <div className="p-4 max-w-7xl mx-auto relative z-0 w-full text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
