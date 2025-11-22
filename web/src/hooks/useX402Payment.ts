@@ -70,16 +70,38 @@ export function useX402Payment() {
         const paymentInfo = await initialResponse.json();
         console.log("[X402] Payment info:", paymentInfo);
 
-        if (!paymentInfo.paymentRequest) {
-          throw new Error("Invalid payment request from server");
+        // x402-express returns an 'accepts' array with payment options
+        if (
+          !paymentInfo.accepts ||
+          !Array.isArray(paymentInfo.accepts) ||
+          paymentInfo.accepts.length === 0
+        ) {
+          throw new Error("No payment options available from server");
         }
 
         if (!evmAddress) {
           throw new Error("Wallet not connected");
         }
 
-        // Get the payment request details
-        const { to, value, chainId } = paymentInfo.paymentRequest;
+        // Get the first payment option (should be EVM native payment)
+        const paymentOption = paymentInfo.accepts[0];
+        console.log("[X402] Payment option:", paymentOption);
+
+        if (!paymentOption.to || !paymentOption.value) {
+          throw new Error("Invalid payment option from server");
+        }
+
+        // Extract payment details from the accepts array
+        const to = paymentOption.to;
+        const value = paymentOption.value;
+        // Map network name to chainId
+        const networkToChainId: Record<string, number> = {
+          "base-sepolia": 84532,
+          base: 8453,
+          ethereum: 1,
+          sepolia: 11155111,
+        };
+        const chainId = networkToChainId[paymentOption.network] || 84532;
 
         console.log("[X402] Payment details:", {
           to,
