@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "tsx",
-        "/Users/tanguyvans/Desktop/hackathon/19_ethba/BA-hack/sqd/mcp-server.ts"
+        "/Users/tanguyvans/Desktop/hackathon/19_ethba/BA-hack/mcp-sqd/mcp-server.ts"
       ],
       "env": {
         "ETHERSCAN_API_KEY": "B8HWU3J9TFZ9HRGZ3V7UWIA3P1VN9XGC9H"
