@@ -386,7 +386,7 @@ router.post("/upload", async (req, res) => {
       console.log(`[UPLOAD]   - Transaction: ${dataRegistryTxHash}`);
     }
     console.log(`[UPLOAD] ========================================`);
-    
+
     return res.json({
       success: true,
       pieceCid: pieceCid,
@@ -459,7 +459,7 @@ router.get("/discover_all", async (req, res) => {
   }
 });
 
-// Discover query endpoint - requires a query and returns a single matching dataset
+// Discover query endpoint - requires a query and returns top 3 matching datasets with scores
 router.get("/discover_query", async (req, res) => {
   try {
     const query = req.query.q as string | undefined;
@@ -575,27 +575,32 @@ router.get("/discover_query", async (req, res) => {
       );
     }
     
-    // Sort by score (highest first) and get the best match
+    // Sort by score (highest first) and get top 3 results
     scoredEvents.sort((a, b) => b.score - a.score);
-    const bestMatch = scoredEvents[0];
+    const topResults = scoredEvents.slice(0, 3); // Get top 3 results
     
-    console.log(`[DISCOVER_QUERY] Found ${scoredEvents.length} matches, best score: ${bestMatch.score}`);
+    console.log(`[DISCOVER_QUERY] Found ${scoredEvents.length} matches, returning top ${topResults.length} results`);
+    topResults.forEach((result, index) => {
+      console.log(`[DISCOVER_QUERY]   ${index + 1}. ${result.event.name} (score: ${result.score.toFixed(2)})`);
+    });
     
-    const result = {
-      pieceCid: bestMatch.event.piece_cid,
-      name: bestMatch.event.name,
-      description: bestMatch.event.description,
-      price: bestMatch.event.price_usdc,
-      filetype: bestMatch.event.filetype,
-      payAddress: bestMatch.event.pay_address,
-    };
+    const results = topResults.map((scoredEvent) => ({
+      pieceCid: scoredEvent.event.piece_cid,
+      name: scoredEvent.event.name,
+      description: scoredEvent.event.description,
+      price: scoredEvent.event.price_usdc,
+      filetype: scoredEvent.event.filetype,
+      payAddress: scoredEvent.event.pay_address,
+      score: scoredEvent.score,
+    }));
     
-    console.log(`[DISCOVER_QUERY] ✓ Found matching dataset: ${result.name} (${result.pieceCid})`);
+    console.log(`[DISCOVER_QUERY] ✓ Returning ${results.length} results for query: "${query}"`);
     
     return res.json({
       success: true,
       query: query,
-      result: result,
+      results: results,
+      count: results.length,
     });
   } catch (error: unknown) {
     console.error(`[DISCOVER_QUERY] ✗ Error in discover_query endpoint:`, error);

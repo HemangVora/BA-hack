@@ -52,6 +52,17 @@ interface UploadResponse {
 interface DiscoverResponse {
   success: boolean;
   query: string;
+  results?: Array<{
+    pieceCid: string;
+    name: string;
+    description: string;
+    price: string; // USDC amount as string
+    filetype: string;
+    payAddress: string;
+    score: number;
+  }>;
+  count?: number;
+  // Legacy support for single result (if server still returns it)
   result?: {
     pieceCid: string;
     name: string;
@@ -475,6 +486,154 @@ server.tool(
   },
 );
 
+// Add tool to discover/search for datasets without downloading
+server.tool(
+  "discover-data",
+  "Search for datasets by query. Returns metadata including name, description, price, filetype, and payment address. Does NOT download the content - use this to browse available datasets and see their prices. IMPORTANT: Prices are always returned in readable USD format (e.g., '$0.01' for 1 cent, '$1.00' for 1 dollar) - never display raw USDC amounts to users.",
+  {
+    query: z.string().describe("REQUIRED: Search query to find datasets. This will search in dataset names and descriptions. You MUST ask the user what they are looking for. Ask: 'What dataset are you looking for?'"),
+  },
+  async (args: { query: string }) => {
+    try {
+      const { query } = args;
+      
+      if (!query || query.trim().length === 0) {
+        throw new Error("query is required and cannot be empty");
+      }
+      
+      const trimmedQuery = query.trim();
+      
+      // Call discover_query endpoint
+      let discoverRes;
+      try {
+        discoverRes = await client.get<DiscoverResponse>("/discover_query", {
+          params: { q: trimmedQuery },
+        });
+      } catch (error: unknown) {
+        // Handle 404 from discover_query endpoint
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          const errorData = error.response?.data;
+          const message = typeof errorData === "object" && errorData !== null && "message" in errorData
+            ? String(errorData.message)
+            : `No dataset found matching the query "${trimmedQuery}"`;
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  success: false,
+                  query: trimmedQuery,
+                  message: message,
+                  error: "No matching dataset found",
+                }, null, 2),
+              },
+            ],
+          };
+        }
+        // Re-throw other errors to be handled below
+        throw error;
+      }
+      
+      if (!discoverRes.data.success || (!discoverRes.data.results && !discoverRes.data.result)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                query: trimmedQuery,
+                message: `No dataset found matching the query "${trimmedQuery}"`,
+                error: "No matching dataset found",
+              }, null, 2),
+            },
+          ],
+        };
+      }
+      
+      // Handle both new format (results array) and legacy format (single result)
+      const results: Array<{
+        pieceCid: string;
+        name: string;
+        description: string;
+        price: string;
+        filetype: string;
+        payAddress: string;
+        score?: number;
+      }> = discoverRes.data.results 
+        ? discoverRes.data.results.map((r: any) => ({ ...r }))
+        : (discoverRes.data.result ? [{ ...discoverRes.data.result }] : []);
+      
+      if (results.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                query: trimmedQuery,
+                message: `No dataset found matching the query "${trimmedQuery}"`,
+                error: "No matching dataset found",
+              }, null, 2),
+            },
+          ],
+        };
+      }
+      
+      // Format prices for all results
+      const formattedResults = results.map((dataset) => {
+        const priceValue = typeof dataset.price === "string" 
+          ? dataset.price 
+          : String(dataset.price);
+        const formattedPrice = formatPriceUSD(priceValue);
+        
+        const result: {
+          pieceCid: string;
+          name: string;
+          description: string;
+          price: string;
+          filetype: string;
+          payAddress: string;
+          score?: number;
+        } = {
+          pieceCid: dataset.pieceCid,
+          name: dataset.name,
+          description: dataset.description,
+          price: formattedPrice, // Always display in readable USD format
+          filetype: dataset.filetype,
+          payAddress: dataset.payAddress,
+        };
+        
+        // Include score if present (new format)
+        if (dataset.score !== undefined) {
+          result.score = dataset.score;
+        }
+        
+        return result;
+      });
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              query: trimmedQuery,
+              count: formattedResults.length,
+              results: formattedResults,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      if (isNetworkError(error)) {
+        throw new Error(`Network error while discovering data: ${errorMessage}`);
+      }
+      throw new Error(`Failed to discover data: ${errorMessage}`);
+    }
+  },
+);
+
 // Add tool to discover and download content from Filecoin
 server.tool(
   "discover-and-download",
@@ -523,7 +682,20 @@ server.tool(
         throw error;
       }
       
-      if (!discoverRes.data.success || !discoverRes.data.result) {
+      // Handle both new format (results array) and legacy format (single result)
+      const results: Array<{
+        pieceCid: string;
+        name: string;
+        description: string;
+        price: string;
+        filetype: string;
+        payAddress: string;
+        score?: number;
+      }> = discoverRes.data.results 
+        ? discoverRes.data.results.map((r: any) => ({ ...r }))
+        : (discoverRes.data.result ? [{ ...discoverRes.data.result }] : []);
+      
+      if (!discoverRes.data.success || results.length === 0) {
         return {
           content: [
             {
@@ -539,7 +711,8 @@ server.tool(
         };
       }
       
-      const discoveredDataset = discoverRes.data.result;
+      // Use the top result (highest score) for download
+      const discoveredDataset = results[0];
       
       // Validate PieceCID before downloading
       validatePieceCid(discoveredDataset.pieceCid);
@@ -556,6 +729,38 @@ server.tool(
         : String(discoveredDataset.price);
       const formattedPrice = formatPriceUSD(priceValue);
       
+      // Format all results for display
+      const formattedResults = results.map((dataset) => {
+        const datasetPriceValue = typeof dataset.price === "string" 
+          ? dataset.price 
+          : String(dataset.price);
+        const datasetFormattedPrice = formatPriceUSD(datasetPriceValue);
+        
+        const result: {
+          pieceCid: string;
+          name: string;
+          description: string;
+          price: string;
+          filetype: string;
+          payAddress: string;
+          score?: number;
+        } = {
+          pieceCid: dataset.pieceCid,
+          name: dataset.name,
+          description: dataset.description,
+          price: datasetFormattedPrice, // Always display in readable USD format
+          filetype: dataset.filetype,
+          payAddress: dataset.payAddress,
+        };
+        
+        // Include score if present (new format)
+        if (dataset.score !== undefined) {
+          result.score = dataset.score;
+        }
+        
+        return result;
+      });
+      
       // Format any price fields in the download response as well
       const formattedDownloadData: DownloadResponse & { priceUSD?: string } = { ...downloadRes.data };
       if (formattedDownloadData.priceUSDC && typeof formattedDownloadData.priceUSDC === "string") {
@@ -570,16 +775,10 @@ server.tool(
               success: true,
               discovery: {
                 query: trimmedQuery,
-                dataset: {
-                  pieceCid: discoveredDataset.pieceCid,
-                  name: discoveredDataset.name,
-                  description: discoveredDataset.description,
-                  price: formattedPrice, // Always display in readable USD format
-                  filetype: discoveredDataset.filetype,
-                  payAddress: discoveredDataset.payAddress,
-                },
+                count: formattedResults.length,
+                results: formattedResults, // Show all results with scores
               },
-              download: formattedDownloadData,
+              download: formattedDownloadData, // Download the top result
             }, null, 2),
           },
         ],

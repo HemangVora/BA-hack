@@ -184,9 +184,26 @@ async function dynamicPricingMiddleware(
   } catch (error: unknown) {
     console.error(`[DYNAMIC_PRICING] Error in dynamic pricing middleware:`, error);
     const errorMessage = error instanceof Error ? error.message : "Could not fetch file metadata";
-    // If we can't get file size, fall back to a default price or error
+    
+    // Check if it's a configuration error (missing SEPOLIA_RPC_URL)
+    if (errorMessage.includes("SEPOLIA_RPC_URL")) {
+      console.error(`[DYNAMIC_PRICING] ✗ Configuration error: ${errorMessage}`);
+      if (!res.headersSent) {
+        res.status(500).json(createErrorResponse(
+          "Server configuration error",
+          "SEPOLIA_RPC_URL is required for contract lookups. Please configure it in the server environment variables.",
+          { 
+            error: errorMessage,
+            hint: "Set SEPOLIA_RPC_URL in your .env file (e.g., https://rpc.sepolia.org or your Infura/Alchemy URL)"
+          }
+        ));
+      }
+      return;
+    }
+    
+    // If we can't get contract data, return an error
     if (!res.headersSent) {
-      res.status(500).json(createErrorResponse("Failed to calculate price", errorMessage));
+      res.status(500).json(createErrorResponse("Failed to fetch contract data", errorMessage));
     }
   }
 }

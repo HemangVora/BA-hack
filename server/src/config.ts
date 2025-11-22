@@ -35,6 +35,10 @@ export const clickhousePassword = optionalEnv("CLICKHOUSE_PASSWORD", "password")
 // Optional environment variables (may be undefined)
 export const privateKey = process.env.PRIVATE_KEY;
 export const rpcUrl = process.env.RPC_URL;
+
+// SEPOLIA_RPC_URL is required for contract lookups (download endpoint needs it)
+// But we make it optional here to allow graceful degradation if not set
+// The contract service will throw a clear error if it's missing when needed
 export const sepoliaRpcUrl = process.env.SEPOLIA_RPC_URL;
 
 // Validate port is a valid number
