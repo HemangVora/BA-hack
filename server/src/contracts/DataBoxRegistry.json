@@ -1,11 +1,11 @@
 {
-  "address": "0x64bdF0319687859f99A49f57dbAF0511b9B0e545",
+  "address": "0x74Bde37e9a69Ee394898ec3C518a61bB0dB21754",
   "abi": [
     {
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "string",
           "name": "pieceCid",
           "type": "string"
@@ -13,7 +13,19 @@
         {
           "indexed": false,
           "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
           "name": "description",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "filetype",
           "type": "string"
         },
         {
@@ -42,6 +54,50 @@
       "inputs": [
         {
           "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "name": "dataRegistry",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "priceUSDC",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "payAddress",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "filetype",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
           "name": "_pieceCid",
           "type": "string"
         }
@@ -61,6 +117,16 @@
         {
           "internalType": "string",
           "name": "payAddress",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "filetype",
           "type": "string"
         },
         {
@@ -95,40 +161,6 @@
       "inputs": [
         {
           "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "name": "dataRegistry",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "priceUSDC",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "payAddress",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
           "name": "_pieceCid",
           "type": "string"
         },
@@ -146,6 +178,16 @@
           "internalType": "string",
           "name": "_payAddress",
           "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_filetype",
+          "type": "string"
         }
       ],
       "name": "register_upload",
@@ -155,4 +197,3 @@
     }
   ]
 }
-

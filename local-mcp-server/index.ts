@@ -70,13 +70,14 @@ server.tool(
 // Add tool to upload content to Filecoin
 server.tool(
   "upload-to-filecoin",
-  "Upload a message, file, or URL to Filecoin storage. Returns the PieceCID that can be used to download the content later. For files, provide base64-encoded data. For URLs, provide a publicly accessible URL and the server will download, encrypt, and upload the file automatically. IMPORTANT: You MUST ask the user for the required payment metadata fields (description, priceUSD, payAddress) - do NOT infer or guess these values. Always prompt the user explicitly for each required field before calling this tool. The priceUSD will be automatically converted to the correct format internally.",
+  "Upload a message, file, or URL to Filecoin storage. Returns the PieceCID that can be used to download the content later. For files, provide base64-encoded data. For URLs, provide a publicly accessible URL and the server will download, encrypt, and upload the file automatically. The filetype will be automatically deduced from the mimeType or filename. IMPORTANT: You MUST ask the user for the required fields (name, description, priceUSD, payAddress) - do NOT infer or guess these values. Always prompt the user explicitly for each required field before calling this tool. The priceUSD will be automatically converted to the correct format internally.",
   {
     message: z.string().optional().describe("Text message to upload to Filecoin"),
     file: z.string().optional().describe("Base64-encoded file data to upload"),
     filename: z.string().optional().describe("Filename (required when uploading a file via base64)"),
-    mimeType: z.string().optional().describe("MIME type of the file (e.g., 'application/pdf', 'image/png')"),
+    mimeType: z.string().optional().describe("MIME type of the file (e.g., 'application/pdf', 'image/png'). If not provided, will be deduced from filename extension."),
     url: z.string().url().optional().describe("URL of a publicly accessible file to download and upload to Filecoin. The server will automatically detect filename and MIME type from the URL or response headers."),
+    name: z.string().describe("REQUIRED: Name of the file/data. You MUST ask the user for this value - do not infer it. Ask: 'What name should this file/data have?'"),
     description: z.string().describe("REQUIRED: Description of what the file/data is. You MUST ask the user for this value - do not infer it. Ask: 'What is a description of this file/data?'"),
     priceUSD: z.union([z.string(), z.number()]).describe("REQUIRED: Price in USD as a decimal number (e.g., 0.01 for $0.01, 1.5 for $1.50, or '0.01' as string). You can also accept formats like '$0.01'. You MUST ask the user for this value - do not infer or guess. Ask: 'What price in USD should this be? (e.g., 0.01 for $0.01)'"),
     payAddress: z.string().describe("REQUIRED: Address to receive payments (0x... for EVM or Solana address). You MUST ask the user for this value - do not infer it. Ask: 'What address should receive payments for this? (0x... for EVM or Solana address)'"),
@@ -87,14 +88,18 @@ server.tool(
     filename?: string; 
     mimeType?: string; 
     url?: string;
+    name: string;
     description: string;
     priceUSD: string | number;
     payAddress: string;
   }) => {
     try {
-      const { message, file, filename, mimeType, url, description, priceUSD, payAddress } = args;
+      const { message, file, filename, mimeType, url, name, description, priceUSD, payAddress } = args;
       
       // Validate required fields
+      if (!name) {
+        throw new Error("name is required");
+      }
       if (!description) {
         throw new Error("description is required");
       }
@@ -158,10 +163,12 @@ server.tool(
         }
       }
       
-      // Add required payment metadata (convert priceUSD to priceUSDC)
+      // Add required metadata fields
+      payload.name = name;
       payload.description = description;
       payload.priceUSDC = priceUSDC; // Already converted to 6 decimals
       payload.payAddress = payAddress;
+      // Note: filetype is automatically deduced by the server from mimeType or filename
 
       const res = await client.post("/upload", payload);
       
@@ -176,6 +183,101 @@ server.tool(
     } catch (error: any) {
       throw new Error(
         `Failed to upload to Filecoin: ${error.message || "Unknown error"}`
+      );
+    }
+  },
+);
+
+// Add tool to discover and download content from Filecoin
+server.tool(
+  "discover-and-download",
+  "Search for a dataset by query and automatically download it. First searches the registry for a matching dataset, then downloads the content. Returns both the discovery metadata and the downloaded content.",
+  {
+    query: z.string().describe("REQUIRED: Search query to find a dataset. This will search in dataset names and descriptions. You MUST ask the user what they are looking for. Ask: 'What dataset are you looking for?'"),
+  },
+  async (args: { query: string }) => {
+    try {
+      const { query } = args;
+      
+      if (!query) {
+        throw new Error("query is required");
+      }
+      
+      // Step 1: Discover the dataset
+      let discoverRes;
+      try {
+        discoverRes = await client.get("/discover_query", {
+          params: { q: query },
+        });
+      } catch (error: any) {
+        // Handle 404 from discover_query endpoint
+        if (error.response?.status === 404) {
+          const errorData = error.response?.data;
+          const message = errorData?.message || `No dataset found matching the query "${query}"`;
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  success: false,
+                  query: query,
+                  message: message,
+                  error: "No matching dataset found",
+                }, null, 2),
+              },
+            ],
+          };
+        }
+        throw error;
+      }
+      
+      if (!discoverRes.data.success || !discoverRes.data.result) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                query: query,
+                message: `No dataset found matching the query "${query}"`,
+                error: "No matching dataset found",
+              }, null, 2),
+            },
+          ],
+        };
+      }
+      
+      const discoveredDataset = discoverRes.data.result;
+      
+      // Step 2: Download the dataset using the pieceCid
+      const downloadRes = await client.get("/download", {
+        params: { pieceCid: discoveredDataset.pieceCid },
+      });
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              discovery: {
+                query: query,
+                dataset: {
+                  pieceCid: discoveredDataset.pieceCid,
+                  name: discoveredDataset.name,
+                  description: discoveredDataset.description,
+                  price: discoveredDataset.price,
+                  filetype: discoveredDataset.filetype,
+                },
+              },
+              download: downloadRes.data,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      // Handle other errors (not 404, which is already handled above)
+      throw new Error(
+        `Failed to discover and download: ${error.message || "Unknown error"}`
       );
     }
   },

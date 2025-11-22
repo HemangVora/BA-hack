@@ -9,6 +9,9 @@ export const port = process.env.PORT || 4021;
 export const privateKey = process.env.PRIVATE_KEY;
 export const rpcUrl = process.env.RPC_URL;
 export const sepoliaRpcUrl = process.env.SEPOLIA_RPC_URL;
+export const clickhouseUrl = process.env.CLICKHOUSE_URL || "http://localhost:8123";
+export const clickhouseUser = process.env.CLICKHOUSE_USER || "default";
+export const clickhousePassword = process.env.CLICKHOUSE_PASSWORD || "password";
 
 if (!facilitatorUrl || !payTo) {
   console.error("Missing required environment variables");
