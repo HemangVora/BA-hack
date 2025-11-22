@@ -1,25 +1,52 @@
-import { createClient } from '@clickhouse/client';
-import { evmPortalSource, EvmQueryBuilder, type EvmPortalData } from '@subsquid/pipes/evm';
-import { clickhouseTarget } from '@subsquid/pipes/targets/clickhouse';
-import { keccak256, toBytes, decodeAbiParameters } from 'viem';
+import { createClient } from "@clickhouse/client";
+import {
+  evmPortalSource,
+  EvmQueryBuilder,
+  type EvmPortalData,
+} from "@subsquid/pipes/evm";
+import { clickhouseTarget } from "@subsquid/pipes/targets/clickhouse";
+import { keccak256, toBytes, decodeAbiParameters } from "viem";
 
 // Configuration
 const CONFIG = {
-  CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS || "0x5b0b1cbF40C910f58B8Ff1d48A629f257a556B99",
+  CONTRACT_ADDRESS:
+    process.env.CONTRACT_ADDRESS ||
+    "0x5b0b1cbF40C910f58B8Ff1d48A629f257a556B99",
   FROM_BLOCK: parseInt(process.env.FROM_BLOCK || "9680000"),
-  PORTAL_URL: process.env.PORTAL_URL || "https://portal.sqd.dev/datasets/ethereum-sepolia",
+  PORTAL_URL:
+    process.env.PORTAL_URL ||
+    "https://portal.sqd.dev/datasets/ethereum-sepolia",
 
   CLICKHOUSE_URL: process.env.CLICKHOUSE_URL || "http://localhost:8123",
   CLICKHOUSE_USER: process.env.CLICKHOUSE_USER || "default",
   CLICKHOUSE_PASSWORD: process.env.CLICKHOUSE_PASSWORD || "password",
 };
 
+<<<<<<< HEAD
 // Event signature: DataUploaded(string,string,string,string,uint256,string,uint256)
 // Order: pieceCid, name, description, filetype, priceUSDC, payAddress, timestamp
 const DATA_UPLOADED_TOPIC = keccak256(toBytes("DataUploaded(string,string,string,string,uint256,string,uint256)"));
+=======
+// Event signature: DataUploaded(string,string,uint256,string,uint256)
+const DATA_UPLOADED_TOPIC = keccak256(
+  toBytes("DataUploaded(string,string,uint256,string,uint256)")
+);
+>>>>>>> bff0531f32feb416c178b1839a1dcc2d70b4291e
 
 async function main() {
-  console.log('DataUploaded event signature:', DATA_UPLOADED_TOPIC);
+  console.log("==============================================");
+  console.log("Configuration:");
+  console.log("==============================================");
+  console.log("CONTRACT_ADDRESS:", CONFIG.CONTRACT_ADDRESS);
+  console.log("FROM_BLOCK:", CONFIG.FROM_BLOCK);
+  console.log("CLICKHOUSE_URL:", CONFIG.CLICKHOUSE_URL);
+  console.log("CLICKHOUSE_USER:", CONFIG.CLICKHOUSE_USER);
+  console.log(
+    "CLICKHOUSE_PASSWORD:",
+    CONFIG.CLICKHOUSE_PASSWORD ? "***SET***" : "***NOT SET***"
+  );
+  console.log("==============================================");
+  console.log("DataUploaded event signature:", DATA_UPLOADED_TOPIC);
 
   const queryBuilder = new EvmQueryBuilder()
     .addFields({
@@ -55,6 +82,7 @@ async function main() {
         for (const block of data.blocks) {
           for (const log of block.logs) {
             try {
+<<<<<<< HEAD
               // Decode the event data (all fields are non-indexed)
               // Order: pieceCid, name, description, filetype, priceUSDC, payAddress, timestamp
               const decoded = decodeAbiParameters(
@@ -66,23 +94,45 @@ async function main() {
                   { name: 'priceUSDC', type: 'uint256' },
                   { name: 'payAddress', type: 'string' },
                   { name: 'timestamp', type: 'uint256' },
+=======
+              // pieceCid is indexed (topic[1]), but indexed strings are hashed
+              // So we decode only the non-indexed parameters from data
+              const decoded = decodeAbiParameters(
+                [
+                  { name: "description", type: "string" },
+                  { name: "priceUSDC", type: "uint256" },
+                  { name: "payAddress", type: "string" },
+                  { name: "timestamp", type: "uint256" },
+>>>>>>> bff0531f32feb416c178b1839a1dcc2d70b4291e
                 ],
                 log.data as `0x${string}`
               );
 
+              // The indexed pieceCid is in topics[1], but it's hashed
+              // We'll use the topic hash as an identifier
+              const pieceCidHash = log.topics[1] || "unknown";
+
               events.push({
                 block_number: block.header.number,
                 timestamp: block.header.timestamp,
+<<<<<<< HEAD
                 piece_cid: decoded[0] as string,
                 name: decoded[1] as string,
                 description: decoded[2] as string,
                 filetype: decoded[3] as string,
                 price_usdc: (decoded[4] as bigint).toString(),
                 pay_address: decoded[5] as string,
+=======
+                text_id: pieceCidHash,
+                description: decoded[0] as string,
+                price_usdc: (decoded[1] as bigint).toString(),
+                pay_address: decoded[2] as string,
+>>>>>>> bff0531f32feb416c178b1839a1dcc2d70b4291e
                 tx_hash: log.transactionHash,
               });
             } catch (e) {
-              console.error('Failed to decode event:', e);
+              console.error("Failed to decode event:", e);
+              console.error("Log data:", log);
             }
           }
         }
@@ -115,26 +165,26 @@ async function main() {
               ORDER BY (block_number, tx_hash, piece_cid)
             `,
           });
-          console.log('Table bahack_events created/verified');
+          console.log("Table bahack_events created/verified");
         },
         onData: async ({ data, store }) => {
           if (data.length > 0) {
             await store.insert({
-              table: 'bahack_events',
+              table: "bahack_events",
               values: data,
-              format: 'JSONEachRow',
+              format: "JSONEachRow",
             });
             console.log(`Inserted ${data.length} events`);
           }
         },
         onRollback: async ({ safeCursor, store }) => {
           await store.removeAllRows({
-            tables: ['bahack_events'],
+            tables: ["bahack_events"],
             where: `block_number > {latest:UInt64}`,
             params: { latest: safeCursor.number },
           });
         },
-      }),
+      })
     );
 }
 
