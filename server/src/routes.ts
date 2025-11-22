@@ -83,17 +83,25 @@ router.get("/download", async (req: RequestWithContractData, res) => {
     // Add contract metadata (name and filetype) if available from middleware
     addContractMetadataToResult(result, req.contractData);
 
-    // Register download event on contract (non-blocking, don't fail if it errors)
-    try {
-      const downloadTx = await registerDownloadOnContract(pieceCid);
-      if (downloadTx) {
-        console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+    // Register download event on contract after response is sent (to capture x402 tx hash)
+    res.on('finish', async () => {
+      try {
+        // Get x402 transaction hash from settlement info if available
+        const x402TxHash = req.x402SettlementInfo?.transaction;
+        
+        const downloadTx = await registerDownloadOnContract(pieceCid, x402TxHash);
+        if (downloadTx) {
+          console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+          if (x402TxHash) {
+            console.log(`[ROUTE]   - Included x402 payment tx: ${x402TxHash}`);
+          }
+        }
+      } catch (error: unknown) {
+        // Don't fail the download if registration fails
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
       }
-    } catch (error: unknown) {
-      // Don't fail the download if registration fails
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
-    }
+    });
 
     console.log(`[ROUTE] ✓ Successfully downloaded ${result.size} bytes (format: ${result.format}, type: ${result.type})`);
     return res.json(result);
@@ -141,17 +149,25 @@ router.get("/download/:pieceCid", async (req: RequestWithContractData, res) => {
     // Add contract metadata (name and filetype) if available from middleware
     addContractMetadataToResult(result, req.contractData);
 
-    // Register download event on contract (non-blocking, don't fail if it errors)
-    try {
-      const downloadTx = await registerDownloadOnContract(pieceCid);
-      if (downloadTx) {
-        console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+    // Register download event on contract after response is sent (to capture x402 tx hash)
+    res.on('finish', async () => {
+      try {
+        // Get x402 transaction hash from settlement info if available
+        const x402TxHash = req.x402SettlementInfo?.transaction;
+        
+        const downloadTx = await registerDownloadOnContract(pieceCid, x402TxHash);
+        if (downloadTx) {
+          console.log(`[ROUTE] Download registered on contract: ${downloadTx.txHash}`);
+          if (x402TxHash) {
+            console.log(`[ROUTE]   - Included x402 payment tx: ${x402TxHash}`);
+          }
+        }
+      } catch (error: unknown) {
+        // Don't fail the download if registration fails
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
       }
-    } catch (error: unknown) {
-      // Don't fail the download if registration fails
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error(`[ROUTE] Failed to register download (non-fatal):`, errorMessage);
-    }
+    });
 
     console.log(`[ROUTE] ✓ Successfully downloaded ${result.size} bytes (format: ${result.format}, type: ${result.type})`);
     return res.json(result);

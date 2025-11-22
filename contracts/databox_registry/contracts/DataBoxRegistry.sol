@@ -39,7 +39,8 @@ contract DataBoxRegistry {
         string filetype,
         uint256 priceUSDC,
         string payAddress,
-        uint256 timestamp
+        uint256 timestamp,
+        string x402TxHash
     );
 
     /**
@@ -137,8 +138,9 @@ contract DataBoxRegistry {
     /**
      * @dev Register a download event
      * @param _pieceCid the PieceCID that was downloaded
+     * @param _x402TxHash the x402 payment transaction hash (optional, can be empty string)
      */
-    function register_download(string memory _pieceCid) public {
+    function register_download(string memory _pieceCid, string memory _x402TxHash) public {
         // Verify that the data is registered
         DataInfo memory data = dataRegistry[_pieceCid];
         require(
@@ -154,7 +156,8 @@ contract DataBoxRegistry {
             data.filetype,
             data.priceUSDC,
             data.payAddress,
-            block.timestamp
+            block.timestamp,
+            _x402TxHash
         );
     }
 }

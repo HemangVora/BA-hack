@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import { paymentMiddleware, Resource, type SolanaAddress } from "x402-express";
 import { facilitatorUrl } from "./config.js";
 import { getDataFromContract } from "./services/contract.js";
-import { RequestWithContractData } from "./types.js";
+import { RequestWithContractData, X402SettlementInfo } from "./types.js";
 import { createErrorResponse } from "./utils/errors.js";
 
 /**
@@ -113,6 +113,34 @@ async function dynamicPricingMiddleware(
     console.log(`[DYNAMIC_PRICING] Executing x402 payment middleware (checking for X-PAYMENT header)...`);
     const hasPaymentHeader = req.headers['x-payment'] ? 'present' : 'missing';
     console.log(`[DYNAMIC_PRICING]   - X-PAYMENT header: ${hasPaymentHeader}`);
+    
+    // Intercept response to capture X-PAYMENT-RESPONSE header after settlement
+    const originalEnd = res.end.bind(res);
+    res.end = function(chunk?: any, encoding?: BufferEncoding | (() => void), cb?: () => void): Response {
+      // Extract settlement info from X-PAYMENT-RESPONSE header if present
+      const paymentResponseHeader = res.getHeader('X-PAYMENT-RESPONSE') || res.getHeader('x-payment-response');
+      if (paymentResponseHeader && typeof paymentResponseHeader === 'string') {
+        try {
+          // Decode base64 header and parse JSON
+          const decoded = Buffer.from(paymentResponseHeader, 'base64').toString('utf-8');
+          const settlementInfo = JSON.parse(decoded) as X402SettlementInfo;
+          if (settlementInfo.success && settlementInfo.transaction) {
+            req.x402SettlementInfo = settlementInfo;
+            console.log(`[DYNAMIC_PRICING] ✓ Captured x402 settlement: tx=${settlementInfo.transaction} on ${settlementInfo.network}`);
+          }
+        } catch (error) {
+          console.warn(`[DYNAMIC_PRICING] Failed to parse X-PAYMENT-RESPONSE header:`, error);
+        }
+      }
+      // Call original end with proper arguments handling
+      if (typeof encoding === 'function') {
+        return originalEnd(chunk, encoding);
+      } else if (encoding !== undefined) {
+        return originalEnd(chunk, encoding, cb);
+      } else {
+        return originalEnd(chunk);
+      }
+    } as typeof res.end;
     
     // Create a controlled next function that tracks when payment is verified
     // The x402 middleware will ONLY call next() after payment verification succeeds

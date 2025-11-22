@@ -8,6 +8,14 @@ import { Request } from "express";
 export interface RequestWithContractData extends Request {
   contractData?: ContractData;
   dynamicPrice?: string;
+  x402SettlementInfo?: X402SettlementInfo;
+}
+
+export interface X402SettlementInfo {
+  success: boolean;
+  transaction: string; // Transaction hash
+  network: string;
+  payer: string;
 }
 
 export interface ContractData {

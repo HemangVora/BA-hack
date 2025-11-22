@@ -144,10 +144,12 @@ export async function getDataFromContract(
 /**
  * Registers a download event on the DataBoxRegistry smart contract
  * @param pieceCid The PieceCID that was downloaded
+ * @param x402TxHash Optional x402 payment transaction hash
  * @returns Transaction hash and block number (optional - may not wait for confirmation)
  */
 export async function registerDownloadOnContract(
   pieceCid: string,
+  x402TxHash?: string,
 ): Promise<{ txHash: string; blockNumber?: number } | null> {
   if (!privateKey) {
     // If no private key, we can't register downloads - this is optional
@@ -166,10 +168,13 @@ export async function registerDownloadOnContract(
   const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
   console.log(`[CONTRACT] Registering download for PieceCID: ${pieceCid}`);
+  if (x402TxHash) {
+    console.log(`[CONTRACT]   - x402 Payment Tx Hash: ${x402TxHash}`);
+  }
 
   try {
-    // Call the register_download function
-    const tx = await contract.register_download(pieceCid);
+    // Call the register_download function with x402 tx hash (or empty string if not provided)
+    const tx = await contract.register_download(pieceCid, x402TxHash || "");
     console.log(`[CONTRACT] Download registration transaction sent: ${tx.hash}`);
     
     // Don't wait for confirmation to avoid blocking the download response
