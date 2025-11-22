@@ -88,20 +88,22 @@ export function useX402Payment() {
         const to = paymentOption.payTo;
         const value = paymentOption.maxAmountRequired;
         const asset = paymentOption.asset; // USDC token address
+        const network = paymentOption.network; // e.g., "base-sepolia"
 
-        // Map network name to chainId
+        // Map network name to chainId for transaction
         const networkToChainId: Record<string, number> = {
           "base-sepolia": 84532,
           base: 8453,
           ethereum: 1,
           sepolia: 11155111,
         };
-        const chainId = networkToChainId[paymentOption.network] || 84532;
+        const chainId = networkToChainId[network] || 84532;
 
         console.log("[X402] Payment details:", {
           to,
           value,
           asset,
+          network,
           chainId,
           from: evmAddress,
         });
@@ -144,7 +146,7 @@ export function useX402Payment() {
               type: "eip1559",
             },
             evmAccount: evmAddress as `0x${string}`,
-            network: "base-sepolia",
+            network: network as any, // Use dynamic network from payment option
           });
 
           txHash = result.transactionHash;
@@ -160,7 +162,7 @@ export function useX402Payment() {
               type: "eip1559",
             },
             evmAccount: evmAddress as `0x${string}`,
-            network: "base-sepolia",
+            network: network as any, // Use dynamic network from payment option
           });
 
           txHash = result.transactionHash;
@@ -169,10 +171,10 @@ export function useX402Payment() {
         console.log("[X402] Payment transaction sent:", txHash);
 
         // Step 5: Create payment proof header
-        // The x402 protocol expects a base64-encoded JSON object
+        // The x402 protocol expects a base64-encoded JSON object with network name, not chainId
         const paymentProofData = {
           transactionHash: txHash,
-          chainId: chainId,
+          network: network, // Use network name (e.g., "base-sepolia") not chainId
         };
         const paymentProofJson = JSON.stringify(paymentProofData);
         const paymentProof = btoa(paymentProofJson); // Base64 encode
