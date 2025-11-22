@@ -4,13 +4,6 @@ import { useState } from "react";
 import { useEvmAddress, useSendEvmTransaction } from "@coinbase/cdp-hooks";
 import { encodeFunctionData } from "viem";
 
-// Extend Window interface for ethereum provider
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
-
 export interface PaymentRequiredResponse {
   paymentRequest: {
     to: string;
