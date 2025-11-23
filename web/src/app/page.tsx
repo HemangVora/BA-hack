@@ -1,18 +1,27 @@
 import { Navbar } from "@/components/Navbar";
-import { Hero } from "@/components/Hero";
-import { DatasetEvents } from "@/components/DatasetEvents";
-import { DatasetDownloads } from "@/components/DatasetDownloads";
-import { Marketplace } from "@/components/Marketplace";
 import { Footer } from "@/components/Footer";
+import { ExplorerTable } from "@/components/ExplorerTable";
+import { StatsOverview } from "@/components/StatsOverview";
+import { Search } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-black text-white selection:bg-indigo-500/30">
+    <main className="min-h-screen bg-[#020408] text-white selection:bg-indigo-500/30 font-sans">
       <Navbar />
-      <Hero />
-      {/* <DatasetEvents /> */}
-      <Marketplace />
-      <DatasetDownloads />
+
+      <div className="container mx-auto px-4 py-12 max-w-7xl">
+        {/* Hero / Search Section */}
+        <div className="flex flex-col items-center text-center mb-16 mt-8"></div>
+
+        {/* Stats Overview */}
+        <StatsOverview />
+
+        {/* Top Datasets Table */}
+        <div className="space-y-6">
+          <ExplorerTable />
+        </div>
+      </div>
+
       <Footer />
     </main>
   );
