@@ -110,17 +110,15 @@ export function UserDashboard() {
 
   if (!isSignedIn) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto">
-        <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A]/50 backdrop-blur-xl shadow-2xl p-16">
+      <div className="w-full">
+        <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A]/50 backdrop-blur-xl shadow-2xl p-8">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-4">
-              <Package className="w-8 h-8 text-indigo-400" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-3">
+              <Package className="w-6 h-6 text-indigo-400" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">
-              Connect Wallet to View Dashboard
-            </h3>
-            <p className="text-neutral-400">
-              Please connect your wallet to view your uploaded datasets.
+            <h3 className="text-lg font-semibold mb-2">Connect Wallet</h3>
+            <p className="text-neutral-400 text-sm">
+              Connect to view your datasets
             </p>
           </div>
         </div>
@@ -130,21 +128,21 @@ export function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto">
-        <div className="flex items-center justify-between mb-8 px-2">
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-4 px-2">
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">
+            <h2 className="text-xl font-bold text-white tracking-tight">
               My Datasets
             </h2>
-            <p className="text-neutral-400 text-sm mt-1.5 flex items-center gap-2">
+            <p className="text-neutral-400 text-xs mt-1 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Loading your datasets
+              Loading...
             </p>
           </div>
         </div>
-        <div className="w-full p-8 space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-white/5 rounded-lg animate-pulse" />
+        <div className="w-full p-6 space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-12 bg-white/5 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -153,8 +151,8 @@ export function UserDashboard() {
 
   if (error) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto">
-        <div className="p-8 text-center text-red-400 border border-red-500/20 bg-red-500/10 rounded-lg">
+      <div className="w-full">
+        <div className="p-6 text-center text-red-400 border border-red-500/20 bg-red-500/10 rounded-lg text-sm">
           {error}
         </div>
       </div>
@@ -162,14 +160,14 @@ export function UserDashboard() {
   }
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto">
+    <div className="w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 px-2">
+      <div className="flex items-center justify-between mb-4 px-2">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
+          <h2 className="text-xl font-bold text-white tracking-tight">
             My Datasets
           </h2>
-          <p className="text-neutral-400 text-sm mt-1.5 flex items-center gap-2">
+          <p className="text-neutral-400 text-xs mt-1 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             {userDatasets.length} dataset{userDatasets.length !== 1 ? "s" : ""}{" "}
             uploaded
@@ -183,22 +181,19 @@ export function UserDashboard() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5 bg-white/5">
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 font-medium text-neutral-500 text-xs uppercase tracking-wider">
                   Dataset
                 </th>
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider font-mono">
-                  Storage
+                <th className="px-4 py-3 font-medium text-neutral-500 text-xs uppercase tracking-wider font-mono">
+                  Price
                 </th>
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider font-mono">
-                  Price (USDC)
-                </th>
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 font-medium text-neutral-500 text-xs uppercase tracking-wider">
                   Format
                 </th>
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 font-medium text-neutral-500 text-xs uppercase tracking-wider">
                   Listed
                 </th>
-                <th className="px-6 py-5 font-medium text-neutral-500 text-xs uppercase tracking-wider text-center">
+                <th className="px-4 py-3 font-medium text-neutral-500 text-xs uppercase tracking-wider text-center">
                   Action
                 </th>
               </tr>
@@ -207,18 +202,18 @@ export function UserDashboard() {
               {userDatasets.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
-                    className="px-6 py-16 text-center text-neutral-500"
+                    colSpan={5}
+                    className="px-4 py-12 text-center text-neutral-500"
                   >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-neutral-600">
-                        <Package className="w-6 h-6" />
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-neutral-600">
+                        <Package className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold mb-1 text-white">
+                        <h3 className="text-base font-semibold mb-1 text-white">
                           No Datasets Yet
                         </h3>
-                        <p>Upload your first dataset to get started!</p>
+                        <p className="text-sm">Upload your first dataset!</p>
                       </div>
                     </div>
                   </td>
@@ -229,59 +224,56 @@ export function UserDashboard() {
                     key={dataset.tx_hash}
                     className="group hover:bg-white/5 transition-all duration-300"
                   >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-indigo-500/10 to-indigo-600/10 flex items-center justify-center border border-indigo-500/20 group-hover:border-indigo-500/40 transition-colors">
-                          <Server className="w-5 h-5 text-indigo-500" />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500/10 to-indigo-600/10 flex items-center justify-center border border-indigo-500/20 group-hover:border-indigo-500/40 transition-colors">
+                          <Server className="w-4 h-4 text-indigo-500" />
                         </div>
-                        <div>
-                          <div className="font-medium text-neutral-200 group-hover:text-white transition-colors flex items-center gap-2 text-base">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-neutral-200 group-hover:text-white transition-colors flex items-center gap-2 text-sm truncate">
                             {dataset.name}
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                            <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />
                           </div>
-                          <div className="text-xs text-neutral-500 mt-0.5 line-clamp-1 max-w-xs">
+                          <div className="text-xs text-neutral-500 mt-0.5 line-clamp-1">
                             {dataset.description}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 font-mono text-neutral-400 text-sm">
-                      On-chain
-                    </td>
-                    <td className="px-6 py-5 font-mono text-neutral-200 text-sm font-medium">
+                    <td className="px-4 py-3 font-mono text-neutral-200 text-sm font-medium">
                       ${formatPrice(dataset.price_usdc)}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-mono uppercase tracking-wide border transition-colors ${getFormatColor(
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wide border transition-colors ${getFormatColor(
                           dataset.filetype
                         )}`}
                       >
                         {dataset.filetype}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-neutral-400 text-sm">
+                    <td className="px-4 py-3 text-neutral-400 text-xs">
                       {formatTimeAgo(dataset.timestamp)}
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
                         <a
                           href={`https://sepolia.etherscan.io/tx/${dataset.tx_hash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 rounded-lg hover:bg-white/10 text-neutral-500 hover:text-white transition-all"
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-neutral-500 hover:text-white transition-all"
                           title="View Transaction"
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(dataset.piece_cid);
                           }}
-                          className="p-2 rounded-lg hover:bg-white/10 text-neutral-500 hover:text-white transition-all"
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-neutral-500 hover:text-white transition-all"
                           title="Copy CID"
                         >
-                          <Download className="w-4 h-4" />
+                          <Download className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
