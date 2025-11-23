@@ -30,6 +30,7 @@ interface ActivityItem {
   title: string;
   type: "ai" | "human" | "download";
   timestamp: string;
+  rawTimestamp: number; // Raw timestamp for sorting
   value: string;
   isPositive?: boolean;
   eventType?: "upload" | "download";
@@ -76,6 +77,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Healthcare Analysis Dataset 2024",
     type: "ai",
     timestamp: "2m ago",
+    rawTimestamp: Date.now() / 1000 - 120,
     value: "$45.00",
     isPositive: true,
   },
@@ -84,6 +86,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Global Temperature Trends",
     type: "human",
     timestamp: "15m ago",
+    rawTimestamp: Date.now() / 1000 - 900,
     value: "Free",
     isPositive: true,
   },
@@ -92,6 +95,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Crypto Market Sentiment Q3",
     type: "ai",
     timestamp: "42m ago",
+    rawTimestamp: Date.now() / 1000 - 2520,
     value: "$120.00",
     isPositive: true,
   },
@@ -100,6 +104,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Urban Traffic Patterns NYC",
     type: "human",
     timestamp: "1h ago",
+    rawTimestamp: Date.now() / 1000 - 3600,
     value: "$15.50",
     isPositive: true,
   },
@@ -108,6 +113,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Solar Flare Predictions",
     type: "ai",
     timestamp: "2h ago",
+    rawTimestamp: Date.now() / 1000 - 7200,
     value: "$80.00",
     isPositive: true,
   },
@@ -116,6 +122,7 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     title: "Genome Sequencing Batch A",
     type: "ai",
     timestamp: "3h ago",
+    rawTimestamp: Date.now() / 1000 - 10800,
     value: "$250.00",
     isPositive: true,
   },
@@ -318,6 +325,7 @@ export function StatsOverview() {
               title: event.name,
               type: "ai", // You can determine this based on some logic if needed
               timestamp: formatTimestamp(event.timestamp),
+              rawTimestamp: event.timestamp,
               value: event.price_usdc === "0" ? "Free" : `$${priceInUSDC}`,
               isPositive: true,
               eventType: "upload",
@@ -335,6 +343,7 @@ export function StatsOverview() {
               title: download.name,
               type: "download",
               timestamp: formatTimestamp(download.timestamp),
+              rawTimestamp: download.timestamp,
               value:
                 download.price_usdc === "0"
                   ? "Free"
@@ -502,10 +511,9 @@ export function StatsOverview() {
           setContributors(contributorsArray);
         }
 
-        // Sort by timestamp (newest first) - assuming timestamp is in seconds
+        // Sort by timestamp (newest first)
         combinedActivities.sort((a, b) => {
-          // Extract the actual timestamp for sorting
-          return 0; // We'll keep the order from API which is already sorted
+          return b.rawTimestamp - a.rawTimestamp;
         });
 
         const newActivities = combinedActivities.slice(0, 20); // Limit to 20 most recent
