@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title DataBoxRegistry
- * @dev Registry for Filecoin data with pricing information
+ * @title DataContextMarketRegistry
+ * @dev Registry for DCM (Data Context Market) data with pricing information
  * @notice Stores and retrieves data metadata including description, price, and payment address
  */
-contract DataBoxRegistry {
+contract DataContextMarketRegistry {
     // Struct to store data information
     struct DataInfo {
         string description;
@@ -45,7 +45,7 @@ contract DataBoxRegistry {
 
     /**
      * @dev Register data and store in mapping
-     * @param _pieceCid unique PieceCID identifier from Filecoin
+     * @param _pieceCid unique PieceCID identifier from DCM (Data Context Market)
      * @param _description description of the data
      * @param _priceUSDC price in USDC (6 decimals)
      * @param _payAddress address to receive payment
