@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "@types/node": "^24.10.1"
+  },
+  "dependencies": {
+    "recharts": "^3.4.1"
   }
 }

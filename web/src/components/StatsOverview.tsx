@@ -1,19 +1,31 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
+import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
+
+// Mock data generator for charts
+const generateChartData = (count: number, min: number, max: number) => {
+  return Array.from({ length: count }).map((_, i) => ({
+    value: Math.floor(Math.random() * (max - min + 1)) + min,
+    index: i,
+  }));
+};
+
+const transactionsData = generateChartData(20, 1000, 5000);
+const volumeData = generateChartData(20, 100, 1000);
+const buyersData = generateChartData(20, 50, 200);
+const sellersData = generateChartData(20, 10, 50);
 
 function StatCard({
   title,
   value,
-  chartPath,
-  chartColor = "text-blue-500",
-  trend,
+  data,
+  color = "#3b82f6", // blue-500
 }: {
   title: string;
   value: string;
-  chartPath: string;
-  chartColor?: string;
-  trend?: "up" | "down";
+  data: any[];
+  color?: string;
 }) {
   return (
     <div className="bg-[#0A0A0A] border border-white/5 rounded-xl p-5 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-white/10 transition-all">
@@ -22,25 +34,34 @@ function StatCard({
         <div className="text-2xl font-bold text-white">{value}</div>
       </div>
 
-      {/* Simple SVG Chart */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 opacity-50">
-        <svg
-          viewBox="0 0 100 40"
-          preserveAspectRatio="none"
-          className={`w-full h-full ${chartColor} fill-current opacity-20`}
-        >
-          <path d={chartPath} />
-        </svg>
-        <svg
-          viewBox="0 0 100 40"
-          preserveAspectRatio="none"
-          className={`w-full h-full ${chartColor} stroke-current fill-none stroke-2 absolute top-0 left-0`}
-        >
-          <path
-            d={chartPath.replace("V 40 H 0 Z", "")}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
+      <div className="absolute bottom-0 left-0 right-0 h-20">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id={`color-${title}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Tooltip
+              contentStyle={{
+                background: "#000",
+                border: "1px solid #333",
+                borderRadius: "4px",
+              }}
+              itemStyle={{ color: "#fff" }}
+              cursor={{ stroke: "rgba(255,255,255,0.1)" }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              fillOpacity={1}
+              fill={`url(#color-${title})`}
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -66,26 +87,26 @@ export function StatsOverview() {
         <StatCard
           title="Transactions"
           value="1.76M"
-          chartPath="M 0 30 Q 10 25 20 28 T 40 20 T 60 25 T 80 15 T 100 10 V 40 H 0 Z"
-          chartColor="text-blue-600"
+          data={transactionsData}
+          color="#3b82f6"
         />
         <StatCard
           title="Volume"
           value="US$197.23K"
-          chartPath="M 0 35 L 10 35 L 15 20 L 25 25 L 35 10 L 45 15 L 55 5 L 65 20 L 75 15 L 100 30 V 40 H 0 Z"
-          chartColor="text-blue-500"
+          data={volumeData}
+          color="#6366f1"
         />
         <StatCard
           title="Buyers"
           value="19.7K"
-          chartPath="M 0 30 Q 25 30 50 20 T 100 5 V 40 H 0 Z"
-          chartColor="text-blue-600"
+          data={buyersData}
+          color="#3b82f6"
         />
         <StatCard
           title="Sellers"
           value="1K"
-          chartPath="M 0 35 L 20 35 L 25 20 L 30 30 L 40 25 L 50 35 L 60 10 L 70 25 L 80 20 L 90 30 L 100 15 V 40 H 0 Z"
-          chartColor="text-blue-600"
+          data={sellersData}
+          color="#6366f1"
         />
       </div>
     </div>
