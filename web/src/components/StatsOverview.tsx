@@ -930,17 +930,6 @@ export function StatsOverview() {
           </div>
 
           <div className="flex-1 w-full -ml-4 mt-4 relative z-0">
-            {/* Floating Badge */}
-            <div className="absolute top-10 right-10 z-20 bg-purple-500 text-white px-2 py-1 rounded-full font-bold text-xs shadow-lg shadow-purple-500/20 transform rotate-3">
-              AI:{" "}
-              <CountUp
-                end={
-                  datasetChartData.length > 0
-                    ? datasetChartData[datasetChartData.length - 1].AI
-                    : 0
-                }
-              />
-            </div>
             <ResponsiveContainer width="115%" height="100%">
               <AreaChart data={datasetChartData}>
                 <defs>
