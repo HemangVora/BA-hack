@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 
 async function main() {
-  console.log("Deploying DataBoxRegistry contract...");
+  console.log("Deploying DataContextMarketRegistry contract...");
 
   // Get the deployer's address
   const [deployer] = await hre.ethers.getSigners();
@@ -12,18 +12,18 @@ async function main() {
   const balance = await hre.ethers.provider.getBalance(deployer.address);
   console.log("Account balance:", hre.ethers.formatEther(balance), "ETH");
 
-  // Deploy the DataBoxRegistry contract
-  const DataBoxRegistry = await hre.ethers.getContractFactory("DataBoxRegistry");
-  const dataBoxRegistry = await DataBoxRegistry.deploy();
+  // Deploy the DataContextMarketRegistry contract
+  const DataContextMarketRegistry = await hre.ethers.getContractFactory("DataContextMarketRegistry");
+  const dataContextMarketRegistry = await DataContextMarketRegistry.deploy();
 
-  await dataBoxRegistry.waitForDeployment();
+  await dataContextMarketRegistry.waitForDeployment();
 
-  const contractAddress = await dataBoxRegistry.getAddress();
-  console.log("DataBoxRegistry contract deployed to:", contractAddress);
+  const contractAddress = await dataContextMarketRegistry.getAddress();
+  console.log("DataContextMarketRegistry contract deployed to:", contractAddress);
 
   // Wait for a few block confirmations
   console.log("Waiting for block confirmations...");
-  await dataBoxRegistry.deploymentTransaction().wait(5);
+  await dataContextMarketRegistry.deploymentTransaction().wait(5);
 
   console.log("\n==============================================");
   console.log("Deployment Summary:");

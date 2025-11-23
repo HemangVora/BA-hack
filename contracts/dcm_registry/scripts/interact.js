@@ -16,13 +16,13 @@ async function main() {
   const deploymentInfo = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
   const contractAddress = deploymentInfo.contractAddress;
 
-  console.log("Interacting with DataBoxRegistry contract at:", contractAddress);
+  console.log("Interacting with DataContextMarketRegistry contract at:", contractAddress);
   console.log("Network:", hre.network.name);
   console.log("==============================================\n");
 
   // Get the contract
-  const DataBoxRegistry = await hre.ethers.getContractFactory("DataBoxRegistry");
-  const dataBoxRegistry = await DataBoxRegistry.attach(contractAddress);
+  const DataContextMarketRegistry = await hre.ethers.getContractFactory("DataContextMarketRegistry");
+  const dataContextMarketRegistry = await DataContextMarketRegistry.attach(contractAddress);
 
   // Get the signer
   const [signer] = await hre.ethers.getSigners();
@@ -31,7 +31,7 @@ async function main() {
   try {
     // Register upload
     console.log("\nRegistering upload...");
-    const uploadTx = await dataBoxRegistry.register_upload(
+    const uploadTx = await dataContextMarketRegistry.register_upload(
       "bafkzcibciacdwydlhwglaeicrliqxxywcbrrol63q3ybv55yw7edjylmqq5pumq",
       "Sample data description for indexing",
       1000000, // 1 USDC (6 decimals)

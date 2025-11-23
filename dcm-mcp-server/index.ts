@@ -1,5 +1,5 @@
 /**
- * MCP Server for uploading and downloading content from Filecoin via the BA-hack server
+ * MCP Server for uploading and downloading content from DCM (Data Context Market) via the server
  * Handles x402 payments automatically when server returns 402 status
  */
 
@@ -154,9 +154,76 @@ function validateBase64(base64String: string): void {
 }
 
 /**
+ * Get MIME type from file extension
+ */
+function getMimeTypeFromFilename(filename: string): string | undefined {
+  const ext = path.extname(filename).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    // Text
+    '.txt': 'text/plain',
+    '.csv': 'text/csv',
+    '.html': 'text/html',
+    '.htm': 'text/html',
+    '.css': 'text/css',
+    '.js': 'text/javascript',
+    '.json': 'application/json',
+    '.xml': 'application/xml',
+    '.md': 'text/markdown',
+    
+    // Images
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.ico': 'image/x-icon',
+    
+    // Documents
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    
+    // Archives
+    '.zip': 'application/zip',
+    '.tar': 'application/x-tar',
+    '.gz': 'application/gzip',
+    '.7z': 'application/x-7z-compressed',
+    '.rar': 'application/vnd.rar',
+    
+    // Audio
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.m4a': 'audio/mp4',
+    '.flac': 'audio/flac',
+    
+    // Video
+    '.mp4': 'video/mp4',
+    '.avi': 'video/x-msvideo',
+    '.mov': 'video/quicktime',
+    '.wmv': 'video/x-ms-wmv',
+    '.mkv': 'video/x-matroska',
+    '.webm': 'video/webm',
+    
+    // Other
+    '.ttf': 'font/ttf',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+  };
+  
+  return mimeTypes[ext];
+}
+
+/**
  * Reads a file from the local filesystem and returns it as base64
  */
-async function readLocalFile(filePath: string): Promise<{ data: string; filename: string }> {
+async function readLocalFile(filePath: string): Promise<{ data: string; filename: string; mimeType?: string }> {
   // Resolve the path (handles relative paths, ~, etc.)
   const resolvedPath = path.resolve(filePath);
   
@@ -175,9 +242,13 @@ async function readLocalFile(filePath: string): Promise<{ data: string; filename
     // Extract filename from path
     const filename = path.basename(resolvedPath);
     
+    // Detect MIME type from filename
+    const mimeType = getMimeTypeFromFilename(filename);
+    
     return {
       data: base64Data,
       filename,
+      mimeType,
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -283,16 +354,16 @@ function formatPriceUSD(priceUSDC: string | number): string {
 
 // Create an MCP server
 const server = new McpServer({
-  name: "filecoin-mcp",
+  name: "data-context-market-mcp",
   version: "1.0.0",
 });
 
-// Add tool to download content from Filecoin
+// Add tool to download content from DCM (Data Context Market)
 server.tool(
-  "download-from-filecoin",
-  "Download content from Filecoin storage using a PieceCID. Returns the content along with metadata including description, price, and payment address if available. IMPORTANT: Prices are always returned in readable USD format (e.g., '$0.01' for 1 cent, '$1.00' for 1 dollar) - never display raw USDC amounts to users.",
+  "download-from-DCM",
+  "Download content from DCM (Data Context Market) storage using a PieceCID. Returns the content along with metadata including description, price, and payment address if available. IMPORTANT: Prices are always returned in readable USD format (e.g., '$0.01' for 1 cent, '$1.00' for 1 dollar) - never display raw USDC amounts to users.",
   {
-    pieceCid: z.string().describe("The PieceCID of the file to download from Filecoin (e.g., 'bafkzcibciacdwydlhwglaeicrliqxxywcbrrol63q3ybv55yw7edjylmqq5pumq')"),
+    pieceCid: z.string().describe("The PieceCID of the file to download from DCM (e.g., 'bafkzcibciacdwydlhwglaeicrliqxxywcbrrol63q3ybv55yw7edjylmqq5pumq')"),
   },
   async (args: { pieceCid: string }) => {
     try {
@@ -322,23 +393,23 @@ server.tool(
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       if (isNetworkError(error)) {
-        throw new Error(`Network error while downloading from Filecoin: ${errorMessage}`);
+        throw new Error(`Network error while downloading from DCM (Data Context Market): ${errorMessage}`);
       }
-      throw new Error(`Failed to download from Filecoin: ${errorMessage}`);
+      throw new Error(`Failed to download from DCM (Data Context Market): ${errorMessage}`);
     }
   },
 );
 
-// Add tool to upload content to Filecoin
+// Add tool to upload content to DCM (Data Context Market)
 server.tool(
-  "upload-to-filecoin",
-  "Upload a message, file, URL, or local file path to Filecoin storage. Returns the PieceCID that can be used to download the content later. For files, provide base64-encoded data OR a local file path. For URLs, provide a publicly accessible URL and the server will download, encrypt, and upload the file automatically. The filetype will be automatically deduced from the mimeType or filename. IMPORTANT: You MUST ask the user for the required fields (name, description, priceUSD, payAddress) - do NOT infer or guess these values. Always prompt the user explicitly for each required field before calling this tool. The priceUSD will be automatically converted to the correct format internally.",
+  "upload-to-DCM",
+  "Upload a message, file, URL, or local file path to DCM (Data Context Market) storage. Returns the PieceCID that can be used to download the content later. For files, provide base64-encoded data OR a local file path. For URLs, provide a publicly accessible URL and the server will download, encrypt, and upload the file automatically. The filetype will be automatically deduced from the mimeType or filename. IMPORTANT: You MUST ask the user for the required fields (name, description, priceUSD, payAddress) - do NOT infer or guess these values. Always prompt the user explicitly for each required field before calling this tool. The priceUSD will be automatically converted to the correct format internally.",
   {
-    message: z.string().optional().describe("Text message to upload to Filecoin"),
+    message: z.string().optional().describe("Text message to upload to DCM (Data Context Market)"),
     file: z.string().optional().describe("Base64-encoded file data to upload"),
     filename: z.string().optional().describe("Filename (required when uploading a file via base64, optional when using filePath)"),
     mimeType: z.string().optional().describe("MIME type of the file (e.g., 'application/pdf', 'image/png'). If not provided, will be deduced from filename extension."),
-    url: z.string().url().optional().describe("URL of a publicly accessible file to download and upload to Filecoin. The server will automatically detect filename and MIME type from the URL or response headers."),
+    url: z.string().url().optional().describe("URL of a publicly accessible file to download and upload to DCM (Data Context Market). The server will automatically detect filename and MIME type from the URL or response headers."),
     filePath: z.string().optional().describe("Local file path to read and upload (e.g., '/Users/name/file.pdf' or './data.csv'). The file will be read from the local filesystem and uploaded. Relative paths are resolved from the current working directory."),
     name: z.string().describe("REQUIRED: Name of the file/data. You MUST ask the user for this value - do not infer it. Ask: 'What name should this file/data have?'"),
     description: z.string().describe("REQUIRED: Description of what the file/data is. You MUST ask the user for this value - do not infer it. Ask: 'What is a description of this file/data?'"),
@@ -410,13 +481,16 @@ server.tool(
       // Handle local file path
       let finalFile: string | undefined = file;
       let finalFilename: string | undefined = filename;
+      let detectedMimeType: string | undefined = undefined;
       
       if (filePath) {
         try {
-          const { data, filename: pathFilename } = await readLocalFile(filePath);
+          const { data, filename: pathFilename, mimeType: detectedMime } = await readLocalFile(filePath);
           finalFile = data;
           // Use filename from path if not provided, otherwise use provided filename
           finalFilename = filename || pathFilename;
+          // Store detected MIME type to use if not explicitly provided
+          detectedMimeType = detectedMime;
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           throw new Error(`Failed to read local file: ${errorMessage}`);
@@ -443,8 +517,11 @@ server.tool(
       if (finalFile) {
         payload.file = finalFile;
         payload.filename = finalFilename!;
+        // Use explicitly provided mimeType, otherwise use detected mimeType from file extension
         if (mimeType) {
           payload.mimeType = mimeType.trim();
+        } else if (detectedMimeType) {
+          payload.mimeType = detectedMimeType;
         }
       }
       if (url) {
@@ -479,9 +556,9 @@ server.tool(
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       if (isNetworkError(error)) {
-        throw new Error(`Network error while uploading to Filecoin: ${errorMessage}`);
+        throw new Error(`Network error while uploading to DCM (Data Context Market): ${errorMessage}`);
       }
-      throw new Error(`Failed to upload to Filecoin: ${errorMessage}`);
+      throw new Error(`Failed to upload to DCM (Data Context Market): ${errorMessage}`);
     }
   },
 );
@@ -634,7 +711,7 @@ server.tool(
   },
 );
 
-// Add tool to discover and download content from Filecoin
+// Add tool to discover and download content from DCM (Data Context Market)
 server.tool(
   "discover-and-download",
   "Search for a dataset by query and automatically download it. First searches the registry for a matching dataset, then downloads the content. Returns both the discovery metadata and the downloaded content. IMPORTANT: Prices are always returned in readable USD format (e.g., '$0.01' for 1 cent, '$1.00' for 1 dollar) - never display raw USDC amounts to users.",
