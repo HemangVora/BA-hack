@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useX402Payment, type DownloadResult } from "@/hooks/useX402Payment";
+import { toast } from "sonner";
 
 interface DownloadDatasetButtonProps {
   pieceCid: string;
@@ -113,6 +114,44 @@ export function DownloadDatasetButton({
         URL.revokeObjectURL(url);
       }
 
+      // Show success toast with transaction info if available
+      const fileName = result.filename || result.name || datasetName;
+      if (result.paymentTransaction) {
+        const txShort = `${result.paymentTransaction.slice(
+          0,
+          6
+        )}...${result.paymentTransaction.slice(-4)}`;
+        const explorerUrl =
+          result.paymentNetwork === "base-sepolia"
+            ? `https://sepolia.basescan.org/tx/${result.paymentTransaction}`
+            : `https://etherscan.io/tx/${result.paymentTransaction}`;
+
+        toast.success("Download Successful!", {
+          description: (
+            <div className="space-y-1">
+              <p className="font-medium">{fileName}</p>
+              <p className="text-xs text-neutral-400">
+                Payment confirmed: {txShort}
+              </p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1"
+              >
+                View transaction →
+              </a>
+            </div>
+          ),
+          duration: 5000,
+        });
+      } else {
+        toast.success("Download Successful!", {
+          description: `${fileName} has been downloaded successfully.`,
+          duration: 4000,
+        });
+      }
+
       // Call success callback
       if (onDownloadSuccess) {
         onDownloadSuccess(result);
@@ -124,8 +163,15 @@ export function DownloadDatasetButton({
       }, 3000);
     } catch (err: any) {
       console.error("[Download] Error:", err);
-      setErrorMessage(err.message || "Download failed");
+      const errorMsg = err.message || "Download failed";
+      setErrorMessage(errorMsg);
       setDownloadState("error");
+
+      // Show error toast
+      toast.error("Download Failed", {
+        description: errorMsg,
+        duration: 5000,
+      });
     }
   };
 
@@ -149,9 +195,7 @@ export function DownloadDatasetButton({
         >
           <AlertCircle className="w-4 h-4" />
         </button>
-        {errorMessage && (
-          <p className="text-xs text-red-400">{errorMessage}</p>
-        )}
+        {errorMessage && <p className="text-xs text-red-400">{errorMessage}</p>}
       </div>
     );
   }

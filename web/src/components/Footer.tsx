@@ -9,7 +9,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
             <h3 className="text-xl font-bold mb-2 bg-clip-text text-transparent bg-linear-to-r from-indigo-400 to-purple-400">
-              DataNexus
+              DCM
             </h3>
             <p className="text-gray-500 text-sm">
               Decentralized dataset marketplace for the AI era.
@@ -38,7 +38,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t border-white/5 text-center text-gray-600 text-sm">
-          © 2025 DataNexus. All rights reserved. Built on x402.
+          © 2025 DCM. All rights reserved. Built on x402.
         </div>
       </div>
     </footer>

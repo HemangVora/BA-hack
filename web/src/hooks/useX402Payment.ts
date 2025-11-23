@@ -13,12 +13,14 @@ export interface DownloadResult {
   mimeType?: string;
   type?: string;
   name?: string;
+  paymentTransaction?: string;
+  paymentNetwork?: string;
 }
 
 /**
  * Hook for handling x402 payments with CDP embedded wallets
  * Uses x402-fetch library with toViemAccount for proper EIP-3009 signatures
- * 
+ *
  * This properly creates EIP-3009 authorization signatures for the "exact" scheme,
  * unlike the previous implementation which was trying to send transactions.
  */
@@ -45,26 +47,23 @@ export function useX402Payment() {
    * Create a fetch wrapper with automatic x402 payment handling
    * Uses x402-fetch library which handles EIP-3009 signatures properly
    */
-  const createPaymentInterceptor = useCallback(
-    async () => {
-      const viemAccount = await getViemAccount();
+  const createPaymentInterceptor = useCallback(async () => {
+    const viemAccount = await getViemAccount();
 
-      // Use x402-fetch library's wrapFetchWithPayment
-      // This automatically handles:
-      // 1. Detecting 402 responses
-      // 2. Creating EIP-3009 authorization
-      // 3. Signing with EIP-712 signTypedData
-      // 4. Retrying with X-PAYMENT header
-      const wrappedFetch = wrapFetchWithPayment(
-        fetch,
-        viemAccount,
-        BigInt(10 * 10 ** 6) // Max 10 USDC per request
-      );
+    // Use x402-fetch library's wrapFetchWithPayment
+    // This automatically handles:
+    // 1. Detecting 402 responses
+    // 2. Creating EIP-3009 authorization
+    // 3. Signing with EIP-712 signTypedData
+    // 4. Retrying with X-PAYMENT header
+    const wrappedFetch = wrapFetchWithPayment(
+      fetch,
+      viemAccount,
+      BigInt(10 * 10 ** 6) // Max 10 USDC per request
+    );
 
-      return wrappedFetch;
-    },
-    [getViemAccount]
-  );
+    return wrappedFetch;
+  }, [getViemAccount]);
 
   /**
    * Download with x402 payment handling
@@ -100,6 +99,28 @@ export function useX402Payment() {
         }
 
         const result = await response.json();
+
+        // Try to extract payment transaction info from X-PAYMENT-RESPONSE header
+        const paymentResponseHeader =
+          response.headers.get("X-PAYMENT-RESPONSE") ||
+          response.headers.get("x-payment-response");
+        if (paymentResponseHeader) {
+          try {
+            const decoded = atob(paymentResponseHeader);
+            const settlementInfo = JSON.parse(decoded);
+            if (settlementInfo.success && settlementInfo.transaction) {
+              result.paymentTransaction = settlementInfo.transaction;
+              result.paymentNetwork = settlementInfo.network;
+              console.log(
+                "[X402] Payment transaction:",
+                settlementInfo.transaction
+              );
+            }
+          } catch (e) {
+            console.warn("[X402] Could not parse payment response header:", e);
+          }
+        }
+
         console.log("[X402] Download successful!");
         setIsProcessing(false);
         return result;
