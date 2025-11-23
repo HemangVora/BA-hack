@@ -120,48 +120,51 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
   },
 ];
 
-const MOCK_CONTRIBUTORS: TopContributor[] = [
-  {
-    id: "1",
-    name: "DataLab_AI",
-    address: "0x71...39A2",
-    volume: "$12,450",
-    items: 145,
-    rank: 1,
-  },
-  {
-    id: "2",
-    name: "Research_DAO",
-    address: "0xB4...91C2",
-    volume: "$8,230",
-    items: 89,
-    rank: 2,
-  },
-  {
-    id: "3",
-    name: "OpenMetrics",
-    address: "0x12...88D1",
-    volume: "$6,120",
-    items: 64,
-    rank: 3,
-  },
-  {
-    id: "4",
-    name: "Quantum_Sense",
-    address: "0x99...11F4",
-    volume: "$4,500",
-    items: 32,
-    rank: 4,
-  },
-  {
-    id: "5",
-    name: "Civic_Data",
-    address: "0x33...77E9",
-    volume: "$3,100",
-    items: 28,
-    rank: 5,
-  },
-];
+// Function to generate random contributor names
+const generateContributorName = (address: string): string => {
+  const prefixes = [
+    "DataLab",
+    "Research",
+    "OpenMetrics",
+    "Quantum",
+    "Civic",
+    "Neural",
+    "Insight",
+    "Synapse",
+    "Axiom",
+    "Vector",
+    "Matrix",
+    "Catalyst",
+    "Zenith",
+    "Nexus",
+    "Prime",
+  ];
+  const suffixes = [
+    "AI",
+    "DAO",
+    "Labs",
+    "Sense",
+    "Data",
+    "Systems",
+    "Network",
+    "Core",
+    "Hub",
+    "Protocol",
+    "Forge",
+    "Collective",
+  ];
+
+  // Use address hash to deterministically pick name components
+  const addressHash = address
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const prefix = prefixes[addressHash % prefixes.length];
+  const suffix = suffixes[(addressHash * 2) % suffixes.length];
+
+  return `${prefix}_${suffix}`;
+};
+
+const MOCK_CONTRIBUTORS: TopContributor[] = [];
 
 // Dataset tag mapping based on keywords
 const getDatasetTag = (name: string, description: string = ""): string => {
@@ -279,6 +282,7 @@ export function StatsOverview() {
     Research: 0,
     Other: 0,
   });
+  const [contributors, setContributors] = useState<TopContributor[]>([]);
 
   useEffect(() => {
     // Fetch real data from API endpoints
@@ -452,6 +456,49 @@ export function StatsOverview() {
           if (finalChartData.length > 0) {
             setDatasetChartData(finalChartData);
           }
+
+          // Process contributors data
+          const contributorMap: {
+            [address: string]: { totalValue: number; count: number };
+          } = {};
+
+          eventsData.events.forEach((event: DatasetEvent) => {
+            const address = event.pay_address;
+            const priceInUSDC = parseFloat(event.price_usdc) / 1e6;
+
+            if (!contributorMap[address]) {
+              contributorMap[address] = { totalValue: 0, count: 0 };
+            }
+
+            contributorMap[address].totalValue += priceInUSDC;
+            contributorMap[address].count += 1;
+          });
+
+          // Convert to array and sort by total value
+          const contributorsArray = Object.entries(contributorMap)
+            .map(([address, data]) => ({
+              id: address,
+              name: generateContributorName(address),
+              address: `${address.slice(0, 4)}...${address.slice(-4)}`,
+              volume: `$${data.totalValue.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`,
+              items: data.count,
+              rank: 0, // Will be set below
+            }))
+            .sort((a, b) => {
+              const aValue = parseFloat(a.volume.replace(/[$,]/g, ""));
+              const bValue = parseFloat(b.volume.replace(/[$,]/g, ""));
+              return bValue - aValue;
+            })
+            .slice(0, 10) // Top 10 contributors
+            .map((contributor, index) => ({
+              ...contributor,
+              rank: index + 1,
+            }));
+
+          setContributors(contributorsArray);
         }
 
         // Sort by timestamp (newest first) - assuming timestamp is in seconds
@@ -776,8 +823,8 @@ export function StatsOverview() {
                     <p className="text-sm">No recent activity</p>
                   </div>
                 )
-              ) : (
-                MOCK_CONTRIBUTORS.map((contributor) => (
+              ) : contributors.length > 0 ? (
+                contributors.map((contributor) => (
                   <div
                     key={contributor.id}
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
@@ -808,6 +855,11 @@ export function StatsOverview() {
                     </div>
                   </div>
                 ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-neutral-500">
+                  <Trophy className="w-12 h-12 mb-2 opacity-30" />
+                  <p className="text-sm">No contributors yet</p>
+                </div>
               )}
             </div>
           </div>
