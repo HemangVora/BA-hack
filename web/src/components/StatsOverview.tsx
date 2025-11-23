@@ -18,10 +18,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  Legend,
 } from "recharts";
 
 // Types
@@ -209,11 +212,6 @@ const getDatasetTag = (name: string, description: string = ""): string => {
   return "Other";
 };
 
-// This will be populated with real data
-const INITIAL_DATASET_CHART_DATA = [
-  { date: "Loading", AI: 0, Finance: 0, Healthcare: 0, Research: 0, Other: 0 },
-];
-
 // CountUp Component
 function CountUp({
   end,
@@ -275,14 +273,19 @@ export function StatsOverview() {
   const [totalDatasetValue, setTotalDatasetValue] = useState(0);
   const [datasetChartData, setDatasetChartData] = useState<
     Array<{
-      date: string;
-      AI: number;
-      Finance: number;
-      Healthcare: number;
-      Research: number;
-      Other: number;
+      time: string;
+      AI_uploads: number;
+      AI_downloads: number;
+      Finance_uploads: number;
+      Finance_downloads: number;
+      Healthcare_uploads: number;
+      Healthcare_downloads: number;
+      Research_uploads: number;
+      Research_downloads: number;
+      Other_uploads: number;
+      Other_downloads: number;
     }>
-  >(INITIAL_DATASET_CHART_DATA);
+  >([]);
   const [tagCounts, setTagCounts] = useState({
     AI: 0,
     Finance: 0,
@@ -448,143 +451,201 @@ export function StatsOverview() {
   }, []);
 
   // Process chart data based on raw events and selected time frame
-  useMemo(() => {
-    if (rawEvents.length === 0) return;
+  // Process uploads vs downloads data with automatic time intervals
+  useEffect(() => {
+    const processActivityData = async () => {
+      try {
+        const [eventsRes, downloadsRes] = await Promise.all([
+          fetch("/api/events"),
+          fetch("/api/downloads"),
+        ]);
 
-    const tagCountsByDate: {
-      [date: string]: {
-        AI: number;
-        Finance: number;
-        Healthcare: number;
-        Research: number;
-        Other: number;
-      };
-    } = {};
+        const eventsData = await eventsRes.json();
+        const downloadsData = await downloadsRes.json();
 
-    // Initialize total tag counts
-    const totalTagCounts = {
-      AI: 0,
-      Finance: 0,
-      Healthcare: 0,
-      Research: 0,
-      Other: 0,
-    };
+        if (!eventsData.success || !downloadsData.success) return;
 
-    // Determine time range for automatic formatting
-    const timestamps = rawEvents.map((e) => e.timestamp);
-    const minTimestamp = Math.min(...timestamps);
-    const maxTimestamp = Math.max(...timestamps);
-    const timeRangeSeconds = maxTimestamp - minTimestamp;
+        const uploads = eventsData.events || [];
+        const downloads = downloadsData.downloads || [];
 
-    // Determine grouping format based on time range
-    let formatLabel: (date: Date) => string;
-
-    if (timeRangeSeconds < 24 * 60 * 60) {
-      // Less than 24 hours - group by hour
-      formatLabel = (date: Date) =>
-        `${date.getHours().toString().padStart(2, "0")}:00`;
-    } else if (timeRangeSeconds < 30 * 24 * 60 * 60) {
-      // Less than 30 days - group by day
-      formatLabel = (date: Date) =>
-        `${date.getDate().toString().padStart(2, "0")}.${(date.getMonth() + 1)
-          .toString()
-          .padStart(2, "0")}`;
-    } else {
-      // More than 30 days - group by week
-      formatLabel = (date: Date) => {
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        return `${weekStart.getDate().toString().padStart(2, "0")}.${(
-          weekStart.getMonth() + 1
-        )
-          .toString()
-          .padStart(2, "0")}`;
-      };
-    }
-
-    // Process each event and categorize by tag
-    rawEvents.forEach((event: DatasetEvent) => {
-      const tag = getDatasetTag(event.name, event.description);
-      const eventDate = new Date(event.timestamp * 1000);
-      const dateKey = formatLabel(eventDate);
-
-      if (!tagCountsByDate[dateKey]) {
-        tagCountsByDate[dateKey] = {
+        // Also update tag counts from uploads
+        const totalTagCounts = {
           AI: 0,
           Finance: 0,
           Healthcare: 0,
           Research: 0,
           Other: 0,
         };
-      }
 
-      // Increment the count for this tag
-      if (tag === "AI") {
-        tagCountsByDate[dateKey].AI++;
-        totalTagCounts.AI++;
-      } else if (tag === "Finance") {
-        tagCountsByDate[dateKey].Finance++;
-        totalTagCounts.Finance++;
-      } else if (tag === "Healthcare") {
-        tagCountsByDate[dateKey].Healthcare++;
-        totalTagCounts.Healthcare++;
-      } else if (tag === "Research") {
-        tagCountsByDate[dateKey].Research++;
-        totalTagCounts.Research++;
-      } else if (tag === "Social") {
-        tagCountsByDate[dateKey].Other++;
-        totalTagCounts.Other++;
-      } else {
-        tagCountsByDate[dateKey].Other++;
-        totalTagCounts.Other++;
-      }
-    });
-
-    // Update tag counts state
-    setTagCounts(totalTagCounts);
-
-    // Convert to array and sort by date
-    const chartData = Object.entries(tagCountsByDate)
-      .map(([date, counts]) => ({
-        date,
-        ...counts,
-      }))
-      .sort((a, b) => {
-        const [dayA, monthA] = a.date.split(".").map(Number);
-        const [dayB, monthB] = b.date.split(".").map(Number);
-        if (monthA !== monthB) return monthA - monthB;
-        return dayA - dayB;
-      });
-
-    // Make counts cumulative
-    const cumulativeData = chartData.reduce((acc, curr, index) => {
-      if (index === 0) {
-        acc.push(curr);
-      } else {
-        const prev = acc[index - 1];
-        acc.push({
-          date: curr.date,
-          AI: prev.AI + curr.AI,
-          Finance: prev.Finance + curr.Finance,
-          Healthcare: prev.Healthcare + curr.Healthcare,
-          Research: prev.Research + curr.Research,
-          Other: prev.Other + curr.Other,
+        uploads.forEach((event: DatasetEvent) => {
+          const tag = getDatasetTag(event.name, event.description);
+          if (tag === "AI") totalTagCounts.AI++;
+          else if (tag === "Finance") totalTagCounts.Finance++;
+          else if (tag === "Healthcare") totalTagCounts.Healthcare++;
+          else if (tag === "Research") totalTagCounts.Research++;
+          else totalTagCounts.Other++;
         });
+
+        setTagCounts(totalTagCounts);
+
+        // Combine all timestamps to determine time range
+        const allTimestamps = [
+          ...uploads.map((e: DatasetEvent) => e.timestamp),
+          ...downloads.map((d: DownloadEvent) => d.timestamp),
+        ];
+
+        if (allTimestamps.length === 0) return;
+
+        const minTimestamp = Math.min(...allTimestamps);
+        const maxTimestamp = Math.max(...allTimestamps);
+        const timeRangeSeconds = maxTimestamp - minTimestamp;
+
+        // Determine grouping interval based on time range
+        let formatLabel: (date: Date) => string;
+
+        if (timeRangeSeconds < 60 * 60) {
+          // Less than 1 hour - group by 5 minutes
+          formatLabel = (date: Date) => {
+            const hours = date.getHours().toString().padStart(2, "0");
+            const mins = (Math.floor(date.getMinutes() / 5) * 5)
+              .toString()
+              .padStart(2, "0");
+            return `${hours}:${mins}`;
+          };
+        } else if (timeRangeSeconds < 24 * 60 * 60) {
+          // Less than 24 hours - group by 30 minutes
+          formatLabel = (date: Date) => {
+            const hours = date.getHours().toString().padStart(2, "0");
+            const mins = (Math.floor(date.getMinutes() / 30) * 30)
+              .toString()
+              .padStart(2, "0");
+            return `${hours}:${mins}`;
+          };
+        } else if (timeRangeSeconds < 7 * 24 * 60 * 60) {
+          // Less than 7 days - group by 4 hours
+          formatLabel = (date: Date) => {
+            const day = date.getDate().toString().padStart(2, "0");
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const hours = (Math.floor(date.getHours() / 4) * 4)
+              .toString()
+              .padStart(2, "0");
+            return `${day}.${month} ${hours}h`;
+          };
+        } else {
+          // More than 7 days - group by day
+          formatLabel = (date: Date) =>
+            `${date.getDate().toString().padStart(2, "0")}.${(
+              date.getMonth() + 1
+            )
+              .toString()
+              .padStart(2, "0")}`;
+        }
+
+        // Group data by time intervals with categories
+        const activityByTime: {
+          [time: string]: {
+            AI_uploads: number;
+            AI_downloads: number;
+            Finance_uploads: number;
+            Finance_downloads: number;
+            Healthcare_uploads: number;
+            Healthcare_downloads: number;
+            Research_uploads: number;
+            Research_downloads: number;
+            Other_uploads: number;
+            Other_downloads: number;
+          };
+        } = {};
+
+        // Process uploads with categories
+        uploads.forEach((event: DatasetEvent) => {
+          const eventDate = new Date(event.timestamp * 1000);
+          const timeKey = formatLabel(eventDate);
+          const tag = getDatasetTag(event.name, event.description);
+
+          if (!activityByTime[timeKey]) {
+            activityByTime[timeKey] = {
+              AI_uploads: 0,
+              AI_downloads: 0,
+              Finance_uploads: 0,
+              Finance_downloads: 0,
+              Healthcare_uploads: 0,
+              Healthcare_downloads: 0,
+              Research_uploads: 0,
+              Research_downloads: 0,
+              Other_uploads: 0,
+              Other_downloads: 0,
+            };
+          }
+
+          // Increment the appropriate category upload
+          if (tag === "AI") activityByTime[timeKey].AI_uploads++;
+          else if (tag === "Finance") activityByTime[timeKey].Finance_uploads++;
+          else if (tag === "Healthcare")
+            activityByTime[timeKey].Healthcare_uploads++;
+          else if (tag === "Research")
+            activityByTime[timeKey].Research_uploads++;
+          else activityByTime[timeKey].Other_uploads++;
+        });
+
+        // Process downloads with categories
+        downloads.forEach((download: DownloadEvent) => {
+          const downloadDate = new Date(download.timestamp * 1000);
+          const timeKey = formatLabel(downloadDate);
+          const tag = getDatasetTag(download.name, download.description);
+
+          if (!activityByTime[timeKey]) {
+            activityByTime[timeKey] = {
+              AI_uploads: 0,
+              AI_downloads: 0,
+              Finance_uploads: 0,
+              Finance_downloads: 0,
+              Healthcare_uploads: 0,
+              Healthcare_downloads: 0,
+              Research_uploads: 0,
+              Research_downloads: 0,
+              Other_uploads: 0,
+              Other_downloads: 0,
+            };
+          }
+
+          // Increment the appropriate category download
+          if (tag === "AI") activityByTime[timeKey].AI_downloads++;
+          else if (tag === "Finance")
+            activityByTime[timeKey].Finance_downloads++;
+          else if (tag === "Healthcare")
+            activityByTime[timeKey].Healthcare_downloads++;
+          else if (tag === "Research")
+            activityByTime[timeKey].Research_downloads++;
+          else activityByTime[timeKey].Other_downloads++;
+        });
+
+        // Convert to array and sort
+        const chartData = Object.entries(activityByTime)
+          .map(([time, counts]) => ({
+            time,
+            ...counts,
+          }))
+          .sort((a, b) => a.time.localeCompare(b.time));
+
+        // Limit data points for better visualization
+        const maxDataPoints = Math.min(20, chartData.length);
+        const finalChartData =
+          chartData.length > maxDataPoints
+            ? chartData.slice(-maxDataPoints)
+            : chartData;
+
+        setDatasetChartData(finalChartData);
+      } catch (error) {
+        console.error("Error processing activity data:", error);
       }
-      return acc;
-    }, [] as typeof chartData);
+    };
 
-    // Limit data points for better visualization (show last 20 points max)
-    const maxDataPoints = Math.min(20, cumulativeData.length);
-    const finalChartData =
-      cumulativeData.length > maxDataPoints
-        ? cumulativeData.slice(-maxDataPoints)
-        : cumulativeData;
-
-    if (finalChartData.length > 0) {
-      setDatasetChartData(finalChartData);
-    }
-  }, [rawEvents]);
+    processActivityData();
+    // Refresh every 10 seconds
+    const interval = setInterval(processActivityData, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Helper function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -912,66 +973,37 @@ export function StatsOverview() {
           </div>
         </div>
 
-        {/* Right Column - Dataset Count by Tag Chart */}
+        {/* Right Column - Uploads vs Downloads Chart */}
         <div className="lg:col-span-3 bg-[#111119] border border-white/5 rounded-2xl p-6 h-[424px] flex flex-col relative overflow-hidden group">
           <div className="flex items-start justify-between mb-2 z-10">
             <div>
               <p className="text-neutral-400 text-sm font-medium mb-1">
-                Total Datasets by Category
+                Platform Activity
               </p>
               <h2 className="text-3xl font-bold text-white tracking-tight">
-                <CountUp end={totalDatasets} suffix=" Datasets" />
+                Uploads vs Downloads
               </h2>
             </div>
-            <div className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
-              <TrendingUp className="w-3 h-3" />
-              Auto
+            <div className="flex items-center gap-1 text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">
+              <Activity className="w-3 h-3" />
+              Live
             </div>
           </div>
 
           <div className="flex-1 w-full -ml-4 mt-4 relative z-0">
             <ResponsiveContainer width="115%" height="100%">
-              <AreaChart data={datasetChartData}>
-                <defs>
-                  <linearGradient id="colorAI" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorFinance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient
-                    id="colorHealthcare"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient
-                    id="colorResearch"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorOther" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6b7280" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6b7280" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={datasetChartData} barGap={1} barCategoryGap={2}>
                 <XAxis
-                  dataKey="date"
+                  dataKey="time"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "#525252", fontSize: 10 }}
                   dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#525252", fontSize: 10 }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -980,78 +1012,90 @@ export function StatsOverview() {
                     borderRadius: "12px",
                   }}
                   itemStyle={{ color: "#fff" }}
+                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="AI"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorAI)"
-                  name="AI"
+                <Legend
+                  wrapperStyle={{ paddingTop: "10px", fontSize: "10px" }}
+                  iconType="rect"
+                  iconSize={8}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="Finance"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorFinance)"
-                  name="Finance"
+                {/* AI Bars */}
+                <Bar
+                  dataKey="AI_uploads"
+                  fill="#8b5cf6"
+                  radius={[2, 2, 0, 0]}
+                  name="AI ↑"
+                  minPointSize={2}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="Healthcare"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorHealthcare)"
-                  name="Healthcare"
+                <Bar
+                  dataKey="AI_downloads"
+                  fill="#a78bfa"
+                  radius={[2, 2, 0, 0]}
+                  name="AI ↓"
+                  minPointSize={2}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="Research"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorResearch)"
-                  name="Research"
+                {/* Finance Bars */}
+                <Bar
+                  dataKey="Finance_uploads"
+                  fill="#10b981"
+                  radius={[2, 2, 0, 0]}
+                  name="Finance ↑"
+                  minPointSize={2}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="Other"
-                  stroke="#6b7280"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorOther)"
-                  name="Other"
+                <Bar
+                  dataKey="Finance_downloads"
+                  fill="#34d399"
+                  radius={[2, 2, 0, 0]}
+                  name="Finance ↓"
+                  minPointSize={2}
                 />
-              </AreaChart>
+                {/* Healthcare Bars */}
+                <Bar
+                  dataKey="Healthcare_uploads"
+                  fill="#f59e0b"
+                  radius={[2, 2, 0, 0]}
+                  name="Healthcare ↑"
+                  minPointSize={2}
+                />
+                <Bar
+                  dataKey="Healthcare_downloads"
+                  fill="#fbbf24"
+                  radius={[2, 2, 0, 0]}
+                  name="Healthcare ↓"
+                  minPointSize={2}
+                />
+                {/* Research Bars */}
+                <Bar
+                  dataKey="Research_uploads"
+                  fill="#3b82f6"
+                  radius={[2, 2, 0, 0]}
+                  name="Research ↑"
+                  minPointSize={2}
+                />
+                <Bar
+                  dataKey="Research_downloads"
+                  fill="#60a5fa"
+                  radius={[2, 2, 0, 0]}
+                  name="Research ↓"
+                  minPointSize={2}
+                />
+                {/* Other Bars */}
+                <Bar
+                  dataKey="Other_uploads"
+                  fill="#6b7280"
+                  radius={[2, 2, 0, 0]}
+                  name="Other ↑"
+                  minPointSize={2}
+                />
+                <Bar
+                  dataKey="Other_downloads"
+                  fill="#9ca3af"
+                  radius={[2, 2, 0, 0]}
+                  name="Other ↓"
+                  minPointSize={2}
+                />
+              </BarChart>
             </ResponsiveContainer>
-          </div>
-
-          {/* Compact Legend */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/5 mt-2 z-10">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-purple-500" />
-              <span className="text-xs text-neutral-400">AI</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-xs text-neutral-400">Finance</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="text-xs text-neutral-400">Healthcare</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <span className="text-xs text-neutral-400">Research</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-gray-500" />
-              <span className="text-xs text-neutral-400">Other</span>
-            </div>
           </div>
         </div>
       </div>
