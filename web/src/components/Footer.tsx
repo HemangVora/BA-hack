@@ -1,6 +1,7 @@
 "use client";
 
 import { Github, Twitter, Disc } from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -8,9 +9,18 @@ export function Footer() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
-            <h3 className="text-xl font-bold mb-2 bg-clip-text text-transparent bg-linear-to-r from-indigo-400 to-purple-400">
-              DCM
-            </h3>
+            <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
+              <Image
+                src="/logo.png"
+                alt="DCM Logo"
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
+              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-indigo-400 to-purple-400">
+                DCM
+              </h3>
+            </div>
             <p className="text-gray-500 text-sm">
               Decentralized dataset marketplace for the AI era.
             </p>

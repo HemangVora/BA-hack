@@ -26,13 +26,13 @@ export function WalletButton() {
 
   if (isSignedIn && evmAddress) {
     return (
-      <div className="relative">
+      <div className="relative ml-2">
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 transition-all text-sm font-medium"
         >
-          <Wallet className="w-4 h-4 text-indigo-400" />
-          <span className="text-indigo-300">{formatAddress(evmAddress)}</span>
+          <Wallet className="w-4 h-4 text-emerald-400" />
+          <span className="text-white">{formatAddress(evmAddress)}</span>
         </button>
 
         {showDropdown && (
@@ -67,8 +67,8 @@ export function WalletButton() {
   }
 
   return (
-    <div className="flex items-center gap-2 relative z-[9999]">
-      <div className="[&>button]:flex [&>button]:items-center [&>button]:gap-2 [&>button]:px-4 [&>button]:py-2 [&>button]:rounded-full [&>button]:bg-indigo-500/10 [&>button]:hover:bg-indigo-500/20 [&>button]:border [&>button]:border-indigo-500/30 [&>button]:transition-all [&>button]:text-sm [&>button]:font-medium [&>button]:text-indigo-300">
+    <div className="flex items-center gap-2 relative z-9999 ml-2">
+      <div className="[&>button]:flex [&>button]:items-center [&>button]:gap-2 [&>button]:px-4 [&>button]:py-2 [&>button]:rounded-lg [&>button]:bg-indigo-600 [&>button]:hover:bg-indigo-700 [&>button]:border-0 [&>button]:transition-all [&>button]:text-sm [&>button]:font-medium [&>button]:text-white [&>button]:shadow-lg [&>button]:shadow-indigo-500/30">
         <AuthButton />
       </div>
     </div>

@@ -14,7 +14,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -291,6 +291,7 @@ export function StatsOverview() {
     Other: 0,
   });
   const [contributors, setContributors] = useState<TopContributor[]>([]);
+  const [rawEvents, setRawEvents] = useState<DatasetEvent[]>([]);
 
   useEffect(() => {
     // Fetch real data from API endpoints
@@ -310,6 +311,11 @@ export function StatsOverview() {
         let datasetCount = 0;
         let downloadCount = 0;
         let totalValue = 0;
+
+        // Store raw events for chart processing
+        if (eventsData.success && eventsData.events) {
+          setRawEvents(eventsData.events);
+        }
 
         // Process events (uploads)
         if (eventsData.success && eventsData.events) {
@@ -359,115 +365,8 @@ export function StatsOverview() {
         setTotalDownloads(downloadCount);
         setTotalDatasetValue(totalValue);
 
-        // Generate chart data from real events
+        // Process contributors data
         if (eventsData.success && eventsData.events) {
-          const tagCountsByDate: {
-            [date: string]: {
-              AI: number;
-              Finance: number;
-              Healthcare: number;
-              Research: number;
-              Other: number;
-            };
-          } = {};
-
-          // Initialize total tag counts
-          const totalTagCounts = {
-            AI: 0,
-            Finance: 0,
-            Healthcare: 0,
-            Research: 0,
-            Other: 0,
-          };
-
-          // Process each event and categorize by tag
-          eventsData.events.forEach((event: DatasetEvent) => {
-            const tag = getDatasetTag(event.name, event.description);
-            const eventDate = new Date(event.timestamp * 1000);
-            const dateKey = `${eventDate
-              .getDate()
-              .toString()
-              .padStart(2, "0")}.${(eventDate.getMonth() + 1)
-              .toString()
-              .padStart(2, "0")}`;
-
-            if (!tagCountsByDate[dateKey]) {
-              tagCountsByDate[dateKey] = {
-                AI: 0,
-                Finance: 0,
-                Healthcare: 0,
-                Research: 0,
-                Other: 0,
-              };
-            }
-
-            // Increment the count for this tag
-            if (tag === "AI") {
-              tagCountsByDate[dateKey].AI++;
-              totalTagCounts.AI++;
-            } else if (tag === "Finance") {
-              tagCountsByDate[dateKey].Finance++;
-              totalTagCounts.Finance++;
-            } else if (tag === "Healthcare") {
-              tagCountsByDate[dateKey].Healthcare++;
-              totalTagCounts.Healthcare++;
-            } else if (tag === "Research") {
-              tagCountsByDate[dateKey].Research++;
-              totalTagCounts.Research++;
-            } else if (tag === "Social") {
-              tagCountsByDate[dateKey].Other++;
-              totalTagCounts.Other++;
-            } else {
-              tagCountsByDate[dateKey].Other++;
-              totalTagCounts.Other++;
-            }
-          });
-
-          // Update tag counts state
-          setTagCounts(totalTagCounts);
-
-          // Convert to array and sort by date
-          const chartData = Object.entries(tagCountsByDate)
-            .map(([date, counts]) => ({
-              date,
-              ...counts,
-            }))
-            .sort((a, b) => {
-              const [dayA, monthA] = a.date.split(".").map(Number);
-              const [dayB, monthB] = b.date.split(".").map(Number);
-              if (monthA !== monthB) return monthA - monthB;
-              return dayA - dayB;
-            });
-
-          // Make counts cumulative
-          const cumulativeData = chartData.reduce((acc, curr, index) => {
-            if (index === 0) {
-              acc.push(curr);
-            } else {
-              const prev = acc[index - 1];
-              acc.push({
-                date: curr.date,
-                AI: prev.AI + curr.AI,
-                Finance: prev.Finance + curr.Finance,
-                Healthcare: prev.Healthcare + curr.Healthcare,
-                Research: prev.Research + curr.Research,
-                Other: prev.Other + curr.Other,
-              });
-            }
-            return acc;
-          }, [] as typeof chartData);
-
-          // Take last 7 days or all if less
-          const finalChartData =
-            cumulativeData.length > 7
-              ? cumulativeData.slice(-7)
-              : cumulativeData;
-
-          if (finalChartData.length > 0) {
-            setDatasetChartData(finalChartData);
-          }
-
-          // Process contributors data
           const contributorMap: {
             [address: string]: { totalValue: number; count: number };
           } = {};
@@ -547,6 +446,145 @@ export function StatsOverview() {
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, []);
+
+  // Process chart data based on raw events and selected time frame
+  useMemo(() => {
+    if (rawEvents.length === 0) return;
+
+    const tagCountsByDate: {
+      [date: string]: {
+        AI: number;
+        Finance: number;
+        Healthcare: number;
+        Research: number;
+        Other: number;
+      };
+    } = {};
+
+    // Initialize total tag counts
+    const totalTagCounts = {
+      AI: 0,
+      Finance: 0,
+      Healthcare: 0,
+      Research: 0,
+      Other: 0,
+    };
+
+    // Determine time range for automatic formatting
+    const timestamps = rawEvents.map((e) => e.timestamp);
+    const minTimestamp = Math.min(...timestamps);
+    const maxTimestamp = Math.max(...timestamps);
+    const timeRangeSeconds = maxTimestamp - minTimestamp;
+
+    // Determine grouping format based on time range
+    let formatLabel: (date: Date) => string;
+
+    if (timeRangeSeconds < 24 * 60 * 60) {
+      // Less than 24 hours - group by hour
+      formatLabel = (date: Date) =>
+        `${date.getHours().toString().padStart(2, "0")}:00`;
+    } else if (timeRangeSeconds < 30 * 24 * 60 * 60) {
+      // Less than 30 days - group by day
+      formatLabel = (date: Date) =>
+        `${date.getDate().toString().padStart(2, "0")}.${(date.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}`;
+    } else {
+      // More than 30 days - group by week
+      formatLabel = (date: Date) => {
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        return `${weekStart.getDate().toString().padStart(2, "0")}.${(
+          weekStart.getMonth() + 1
+        )
+          .toString()
+          .padStart(2, "0")}`;
+      };
+    }
+
+    // Process each event and categorize by tag
+    rawEvents.forEach((event: DatasetEvent) => {
+      const tag = getDatasetTag(event.name, event.description);
+      const eventDate = new Date(event.timestamp * 1000);
+      const dateKey = formatLabel(eventDate);
+
+      if (!tagCountsByDate[dateKey]) {
+        tagCountsByDate[dateKey] = {
+          AI: 0,
+          Finance: 0,
+          Healthcare: 0,
+          Research: 0,
+          Other: 0,
+        };
+      }
+
+      // Increment the count for this tag
+      if (tag === "AI") {
+        tagCountsByDate[dateKey].AI++;
+        totalTagCounts.AI++;
+      } else if (tag === "Finance") {
+        tagCountsByDate[dateKey].Finance++;
+        totalTagCounts.Finance++;
+      } else if (tag === "Healthcare") {
+        tagCountsByDate[dateKey].Healthcare++;
+        totalTagCounts.Healthcare++;
+      } else if (tag === "Research") {
+        tagCountsByDate[dateKey].Research++;
+        totalTagCounts.Research++;
+      } else if (tag === "Social") {
+        tagCountsByDate[dateKey].Other++;
+        totalTagCounts.Other++;
+      } else {
+        tagCountsByDate[dateKey].Other++;
+        totalTagCounts.Other++;
+      }
+    });
+
+    // Update tag counts state
+    setTagCounts(totalTagCounts);
+
+    // Convert to array and sort by date
+    const chartData = Object.entries(tagCountsByDate)
+      .map(([date, counts]) => ({
+        date,
+        ...counts,
+      }))
+      .sort((a, b) => {
+        const [dayA, monthA] = a.date.split(".").map(Number);
+        const [dayB, monthB] = b.date.split(".").map(Number);
+        if (monthA !== monthB) return monthA - monthB;
+        return dayA - dayB;
+      });
+
+    // Make counts cumulative
+    const cumulativeData = chartData.reduce((acc, curr, index) => {
+      if (index === 0) {
+        acc.push(curr);
+      } else {
+        const prev = acc[index - 1];
+        acc.push({
+          date: curr.date,
+          AI: prev.AI + curr.AI,
+          Finance: prev.Finance + curr.Finance,
+          Healthcare: prev.Healthcare + curr.Healthcare,
+          Research: prev.Research + curr.Research,
+          Other: prev.Other + curr.Other,
+        });
+      }
+      return acc;
+    }, [] as typeof chartData);
+
+    // Limit data points for better visualization (show last 20 points max)
+    const maxDataPoints = Math.min(20, cumulativeData.length);
+    const finalChartData =
+      cumulativeData.length > maxDataPoints
+        ? cumulativeData.slice(-maxDataPoints)
+        : cumulativeData;
+
+    if (finalChartData.length > 0) {
+      setDatasetChartData(finalChartData);
+    }
+  }, [rawEvents]);
 
   // Helper function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -887,7 +925,7 @@ export function StatsOverview() {
             </div>
             <div className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
               <TrendingUp className="w-3 h-3" />
-              Growing
+              Auto
             </div>
           </div>
 
