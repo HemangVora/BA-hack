@@ -21,6 +21,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.4.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "viem": "^2.21.54",
     "x402-fetch": "^0.7.0"

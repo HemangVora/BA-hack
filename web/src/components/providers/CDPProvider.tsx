@@ -24,7 +24,7 @@ export function CDPProvider({ children }: CDPProviderProps) {
           // Creates an EOA (Externally Owned Account) on login
           createOnLogin: "eoa", // or "smart" for smart accounts
         },
-        appName: "DataNexus",
+        appName: "DCM",
 
         // Optional: Configure additional networks
         // chains: ["base-sepolia", "base-mainnet"],

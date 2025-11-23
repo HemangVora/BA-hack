@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CDPProvider } from "@/components/providers/CDPProvider";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DataNexus - Decentralized Data Marketplace",
+  title: "DCM - Decentralized Data Marketplace",
   description: "Discover, trade, and monetize datasets on the blockchain",
 };
 
@@ -29,6 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <CDPProvider>{children}</CDPProvider>
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );
