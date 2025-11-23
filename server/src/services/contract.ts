@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { privateKey, sepoliaRpcUrl } from "../config.js";
-import contractArtifact from "../contracts/DataBoxRegistry.json";
+import contractArtifact from "../contracts/DataContextMarketRegistry.json";
 
 // Contract address on Sepolia
 export const CONTRACT_ADDRESS = contractArtifact.address;
@@ -9,7 +9,7 @@ export const CONTRACT_ADDRESS = contractArtifact.address;
 const CONTRACT_ABI = contractArtifact.abi;
 
 /**
- * Registers an upload on the DataBoxRegistry smart contract
+ * Registers an upload on the DataContextMarketRegistry smart contract
  * @param pieceCid The PieceCID from Filecoin (used as _textId)
  * @param description Description of the data
  * @param priceUSDC Price in USDC (6 decimals)
@@ -78,7 +78,7 @@ export async function registerUploadOnContract(
 }
 
 /**
- * Gets data information from the DataBoxRegistry smart contract
+ * Gets data information from the DataContextMarketRegistry smart contract
  * @param pieceCid The PieceCID to look up
  * @returns Data information including description, priceUSDC, payAddress, name, filetype, and timestamp
  */
@@ -142,7 +142,7 @@ export async function getDataFromContract(
 }
 
 /**
- * Registers a download event on the DataBoxRegistry smart contract
+ * Registers a download event on the DataContextMarketRegistry smart contract
  * @param pieceCid The PieceCID that was downloaded
  * @param x402TxHash Optional x402 payment transaction hash
  * @returns Transaction hash and block number (optional - may not wait for confirmation)
