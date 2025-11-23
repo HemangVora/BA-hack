@@ -12,6 +12,7 @@ import {
   Trophy,
   Activity as ActivityIcon,
   Download,
+  Upload,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -787,17 +788,17 @@ export function StatsOverview() {
                           className={`w-8 h-8 rounded-full flex items-center justify-center border ${
                             item.eventType === "download"
                               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                              : item.type === "ai"
-                              ? "bg-purple-500/10 border-purple-500/20 text-purple-400"
-                              : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                              : item.eventType === "upload"
+                              ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                              : "bg-purple-500/10 border-purple-500/20 text-purple-400"
                           }`}
                         >
                           {item.eventType === "download" ? (
                             <Download className="w-4 h-4" />
-                          ) : item.type === "ai" ? (
-                            <Bot className="w-4 h-4" />
+                          ) : item.eventType === "upload" ? (
+                            <Upload className="w-4 h-4" />
                           ) : (
-                            <User className="w-4 h-4" />
+                            <Bot className="w-4 h-4" />
                           )}
                         </div>
                         <div>
