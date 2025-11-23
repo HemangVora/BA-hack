@@ -30,12 +30,11 @@ We built an MCP server for decentralized storage and marketplace functionality. 
 
 ### 💰 x402 Protocol
 
-HTTP-native micropayments for agent-to-agent commerce:
+HTTP-native micropayments enabling AI agents to autonomously pay for data. Agents can discover datasets and purchase them instantly with USDC on Base - no human intervention required.
 
-- **Autonomous payments** - AI agents pay without human intervention
-- **USDC on Base** - Stable, low-fee transactions
-- **Per-request pricing** - Custom prices for each dataset
-- **Instant settlement** - No invoices, no delays
+### 👛 Embedded Wallets
+
+AI agents have their own embedded wallets to make autonomous payments. This enables true agent-to-agent commerce where agents can browse, purchase, and download data without user involvement.
 
 ### 🔗 Data Registry (On-Chain)
 
