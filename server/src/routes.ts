@@ -390,7 +390,7 @@ router.post("/upload", async (req, res) => {
     }
 
     // Register upload on smart contract
-    console.log(`[UPLOAD] Registering upload on DataBoxRegistry smart contract...`);
+    console.log(`[UPLOAD] Registering upload on DataContextMarketRegistry smart contract...`);
     let dataRegistryTxHash: string | undefined;
     let dataRegistryBlockNumber: number | undefined;
     try {

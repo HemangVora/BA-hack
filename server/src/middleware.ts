@@ -63,7 +63,7 @@ async function dynamicPricingMiddleware(
       console.log(`[DYNAMIC_PRICING] ✗ PieceCID not found in contract registry`);
       res.status(404).json({
         error: "PieceCID not registered",
-        message: `The PieceCID "${pieceCid}" is not registered in the DataBoxRegistry contract. Please register it first before downloading.`,
+        message: `The PieceCID "${pieceCid}" is not registered in the DataContextMarketRegistry contract. Please register it first before downloading.`,
         pieceCid: pieceCid,
       });
       return;
