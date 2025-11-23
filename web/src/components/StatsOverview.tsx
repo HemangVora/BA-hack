@@ -286,16 +286,36 @@ export function StatsOverview() {
           return 0; // We'll keep the order from API which is already sorted
         });
 
-        setActivities(combinedActivities.slice(0, 20)); // Limit to 20 most recent
+        const newActivities = combinedActivities.slice(0, 20); // Limit to 20 most recent
+
+        // Only update if data has changed
+        setActivities((prevActivities) => {
+          const hasChanged =
+            JSON.stringify(prevActivities) !== JSON.stringify(newActivities);
+          return hasChanged ? newActivities : prevActivities;
+        });
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching activities:", error);
-        setActivities(MOCK_ACTIVITIES); // Fallback to mock data
+        // Only set mock data on first load
+        setActivities((prevActivities) =>
+          prevActivities.length === 0 ? MOCK_ACTIVITIES : prevActivities
+        );
         setLoading(false);
       }
     };
 
+    // Initial fetch
     fetchActivities();
+
+    // Poll every 10 seconds
+    const intervalId = setInterval(() => {
+      fetchActivities();
+    }, 10000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   // Helper function to format timestamp
