@@ -13,41 +13,42 @@ DCM bridges data creators and AI agents through a decentralized marketplace. Cre
 ## Technology Stack
 
 ### 🤖 MCP (Model Context Protocol)
+
 DCM is built as a suite of **MCP servers** that integrate directly with AI assistants like Claude:
+
 - Natural language commands to index blockchain data
 - AI agents discover, purchase, and download datasets autonomously
 - Seamless tool orchestration without custom API integrations
 
 ### 📊 SQD (Subsquid) Pipes SDK
-Real-time blockchain data indexing:
-- **Event tracking** - Index any smart contract event (Swaps, Transfers, Deposits, etc.)
-- **Whale filtering** - Filter by minimum/maximum amounts
-- **Address filtering** - Whitelist or blacklist specific addresses
-- **Data aggregation** - Group by wallet, sum amounts, count transactions
-- **Multi-chain support** - Ethereum, Polygon, Arbitrum, Optimism, Base
-- **Block range limits** - Control data volume with from/to block parameters
 
-### 🗄️ Filecoin & Storacha
-Decentralized, permanent storage:
-- **Content-addressed** - Each file gets a unique PieceCID
-- **Censorship-resistant** - No central authority can remove your data
-- **Verifiable** - Cryptographic proof of storage
+We built an MCP server around SQD Pipes SDK for natural language blockchain data indexing. Users can create pipes to index any smart contract event, apply custom filters, aggregate data, and export to CSV - all through prompts.
+
+### 🗄️ Filecoin Storage
+
+We built an MCP server for decentralized storage and marketplace functionality. Upload files to Filecoin, set pricing, register datasets on-chain, and enable AI agents to discover and purchase data.
 
 ### 💰 x402 Protocol
+
 HTTP-native micropayments for agent-to-agent commerce:
+
 - **Autonomous payments** - AI agents pay without human intervention
 - **USDC on Base** - Stable, low-fee transactions
 - **Per-request pricing** - Custom prices for each dataset
 - **Instant settlement** - No invoices, no delays
 
 ### 🔗 Data Registry (On-Chain)
+
 Smart contract on Sepolia tracking all uploaded datasets:
+
 - Immutable record of every upload
 - Discoverable metadata (name, description, price, PieceCID)
 - Payment routing to creator wallets
 
 ### ⚡ ClickHouse
+
 High-performance analytics database:
+
 - Columnar storage optimized for aggregations
 - Fast ingestion of millions of events
 - SQL interface
@@ -80,12 +81,14 @@ BA-hack/
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/your-repo/BA-hack.git
 cd BA-hack
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 cd mcp-sqd && npm install
@@ -119,6 +122,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```
 
 4. Start ClickHouse (optional, for local analytics):
+
 ```bash
 docker run -d --name clickhouse -p 8123:8123 clickhouse/clickhouse-server
 ```
@@ -130,6 +134,7 @@ docker run -d --name clickhouse -p 8123:8123 clickhouse/clickhouse-server
 ### Example 1: Index Uniswap V4 Whale Swaps
 
 **Step 1 - Create & Run Pipe:**
+
 ```
 Generate and run a pipe for Uniswap V4 PoolManager at
 0x000000000004444c5dc75cB358380D2e3dE08A90 on mainnet.
@@ -139,6 +144,7 @@ table name "v4_swaps".
 ```
 
 **Step 2 - Aggregate:**
+
 ```
 Stop the pipe. Then aggregate the CSV file, group by to_address,
 sum the amount column as total_volume, count transactions as swap_count,
@@ -146,6 +152,7 @@ sort by swap_count desc, limit 20.
 ```
 
 **Step 3 - Upload to Filecoin:**
+
 ```
 Upload to Filecoin with name "UniswapWhales", price $0.01,
 description "Top Uniswap V4 traders by swap count"
