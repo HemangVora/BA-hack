@@ -265,7 +265,7 @@ export function ExplorerTable() {
                   >
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-600/10 flex items-center justify-center border border-orange-500/20 group-hover:border-orange-500/40 transition-colors">
+                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-orange-500/10 to-orange-600/10 flex items-center justify-center border border-orange-500/20 group-hover:border-orange-500/40 transition-colors">
                           <Server className="w-5 h-5 text-orange-500" />
                         </div>
                         <div>
@@ -321,7 +321,7 @@ export function ExplorerTable() {
                       {dataset.size}
                     </td>
                     <td className="px-6 py-5 font-mono text-neutral-200 text-sm font-medium">
-                      ${dataset.price.toFixed(2)}
+                      ${dataset.price}
                     </td>
                     <td className="px-6 py-5">
                       <span

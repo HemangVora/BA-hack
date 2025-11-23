@@ -68,10 +68,7 @@ export function RecentDownloadsTable() {
 
   const formatPrice = (priceUsdc: string) => {
     const price = parseFloat(priceUsdc) / 1_000_000;
-    return price.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    });
+    return price;
   };
 
   const shortenAddress = (address: string) => {
